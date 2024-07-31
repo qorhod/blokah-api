@@ -1,17 +1,31 @@
 const jwt = require('jsonwebtoken');
+const invalidTokens = [];
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.header('Authorization');
-  if (!authHeader) return res.status(401).json({ message: 'Access denied' });
+  if (!authHeader) {
+    console.log('Access denied: No auth header');
+    return res.status(401).json({ message: 'Access denied' });
+  }
 
   const token = authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'Access denied' });
+  if (!token) {
+    console.log('Access denied: No token provided');
+    return res.status(401).json({ message: 'Access denied' });
+  }
+
+  if (invalidTokens.includes(token)) {
+    console.log('Access denied: Token is invalid');
+    return res.status(401).json({ message: 'Token is invalid' });
+  }
 
   try {
     const verified = jwt.verify(token, process.env.JWT_SECRET);
     req.user = verified;
+    console.log('Token verified, user:', req.user);
     next();
   } catch (error) {
+    console.log('Invalid token');
     res.status(400).json({ message: 'Invalid token' });
   }
 };
@@ -25,4 +39,4 @@ const authorizeRole = (roles) => {
   };
 };
 
-module.exports = { authenticateToken, authorizeRole };
+module.exports = { authenticateToken, authorizeRole, invalidTokens };

@@ -1,26 +1,3 @@
-// const express = require('express');
-// const router = express.Router();
-// const { authenticateToken } = require('../../middleware/auth');
-// const userController = require('../../controllers/user/userController');
-
-// // Register user
-// router.post('/register', userController.register);
-
-// // Login user
-// router.post('/login', userController.login);
-
-// // Route accessible by any authenticated user
-// router.get('/profile', authenticateToken, userController.getProfile);
-
-// // CRUD operations for users
-// router.get('/', authenticateToken, userController.getUsers);
-// router.put('/:id', authenticateToken, userController.updateUser);
-// router.delete('/:id', authenticateToken, userController.deleteUser);
-
-// module.exports = router;
-
-
-
 
 
 
@@ -89,6 +66,29 @@ router.post('/register', userController.register);
  */
 router.post('/login', userController.login);
 
+
+// تسجيل الخروج
+
+/**
+ * @swagger
+ * /user/logout:
+ *   post:
+ *     summary: Logout a user
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User logged out successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/logout', authenticateToken, userController.logout);
+
+
+
 /**
  * @swagger
  * /user/profile:
@@ -109,37 +109,12 @@ router.get('/profile', authenticateToken, userController.getProfile);
 
 /**
  * @swagger
- * /user:
- *   get:
- *     summary: Get all users
- *     tags: [User]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of users
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.get('/', authenticateToken, userController.getUsers);
-
-/**
- * @swagger
- * /user/{id}:
+ * /user/profile:
  *   put:
- *     summary: Update a user by ID
+ *     summary: Update the authenticated user's profile
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: The user ID
  *     requestBody:
  *       required: true
  *       content:
@@ -149,47 +124,21 @@ router.get('/', authenticateToken, userController.getUsers);
  *             properties:
  *               username:
  *                 type: string
- *               accountType:
+ *               password:
  *                 type: string
  *     responses:
  *       200:
- *         description: User updated
+ *         description: User profile updated
  *       400:
  *         description: Bad request
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: User not found
  *       500:
  *         description: Internal server error
  */
-router.put('/:id', authenticateToken, userController.updateUser);
+router.put('/profile', authenticateToken, userController.updateProfile);
 
-/**
- * @swagger
- * /user/{id}:
- *   delete:
- *     summary: Delete a user by ID
- *     tags: [User]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: string
- *         required: true
- *         description: The user ID
- *     responses:
- *       200:
- *         description: User deleted
- *       401:
- *         description: Unauthorized
- *       404:
- *         description: User not found
- *       500:
- *         description: Internal server error
- */
-router.delete('/:id', authenticateToken, userController.deleteUser);
+
+
 
 module.exports = router;

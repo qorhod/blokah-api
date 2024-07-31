@@ -2,8 +2,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const User = require('../../models/user');
+const { invalidTokens } = require('../../middleware/auth'); // استيراد invalidTokens
 
-// Schema for validation
+
+// Schemas for validation
 const registerSchema = Joi.object({
   username: Joi.string().min(3).required(),
   password: Joi.string().min(6).required(),
@@ -13,6 +15,11 @@ const registerSchema = Joi.object({
 const loginSchema = Joi.object({
   username: Joi.string().min(3).required(),
   password: Joi.string().min(6).required()
+});
+
+const updateProfileSchema = Joi.object({
+  username: Joi.string().min(3),
+  password: Joi.string().min(6)
 });
 
 exports.register = async (req, res) => {
@@ -41,10 +48,8 @@ exports.register = async (req, res) => {
     await user.save();
 
     const payload = {
-      user: {
-        id: user.id,
-        accountType: user.accountType
-      }
+      id: user.id,
+      accountType: user.accountType
     };
 
     jwt.sign(
@@ -82,10 +87,8 @@ exports.login = async (req, res) => {
     }
 
     const payload = {
-      user: {
-        id: user.id,
-        accountType: user.accountType
-      }
+      id: user.id,
+      accountType: user.accountType
     };
 
     jwt.sign(
@@ -103,57 +106,74 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.getProfile = (req, res) => {
-  res.json({ message: 'Welcome to user profile' });
-};
-
-exports.getUsers = async (req, res) => {
+exports.getProfile = async (req, res) => {
   try {
-    const users = await User.find();
-    res.json(users);
+    console.log('Fetching profile for user id:', req.user.id);
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+    res.json({
+      message: 'User profile',
+      user: {
+        id: user._id,
+        username: user.username,
+        accountType: user.accountType,
+      }
+    });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
   }
 };
 
-exports.updateUser = async (req, res) => {
-  const { id } = req.params;
-  const { username, accountType } = req.body;
+exports.updateProfile = async (req, res) => {
+  const { error } = updateProfileSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ msg: error.details[0].message });
+  }
+
+  const { username, password } = req.body;
 
   try {
-    const user = await User.findById(id);
+    console.log('Updating profile for user id:', req.user.id);
+    const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
     }
 
     user.username = username || user.username;
-    user.accountType = accountType || user.accountType;
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(password, salt);
+    }
 
     await user.save();
-    res.json(user);
+    res.json({ msg: 'Profile updated successfully', user });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
   }
 };
 
-exports.deleteUser = async (req, res) => {
-  const { id } = req.params;
 
+
+
+
+
+
+// logout
+exports.logout = (req, res) => {
   try {
-    console.log(`Attempting to delete user with id: ${id}`);
-    const user = await User.findById(id);
-    if (!user) {
-      console.log('User not found');
-      return res.status(404).json({ msg: 'User not found' });
-    }
-
-    await User.findByIdAndDelete(id);
-    console.log('User removed successfully');
-    res.json({ msg: 'User removed' });
+    const token = req.header('Authorization').split(' ')[1];
+    invalidTokens.push(token); // إضافة التوكن إلى قائمة التوكنات الملغاة
+    res.json({ msg: 'User logged out successfully' });
   } catch (err) {
-    console.error(`Error occurred while deleting user: ${err.message}`);
+    console.error('Error during logout:', err.message);
     res.status(500).send('Server error');
   }
 };
+
+
+
