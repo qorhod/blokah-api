@@ -1,143 +1,37 @@
-
-
-
-
-
-
-
 const express = require('express');
 const router = express.Router();
-const { authenticateToken } = require('../../middleware/auth');
 const userController = require('../../controllers/user/userController');
+const { authenticateToken } = require('../../middleware/auth'); // استيراد authenticateToken
 
-/**
- * @swagger
- * /user/register:
- *   post:
- *     summary: Register a new user
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               password:
- *                 type: string
- *               accountType:
- *                 type: string
- *     responses:
- *       200:
- *         description: User successfully registered
- *       400:
- *         description: Bad request
- *       500:
- *         description: Internal server error
- */
+// إنشاء حساب جديد
 router.post('/register', userController.register);
 
-/**
- * @swagger
- * /user/login:
- *   post:
- *     summary: Login a user
- *     tags: [User]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: User successfully logged in
- *       400:
- *         description: Invalid credentials
- *       500:
- *         description: Internal server error
- */
-router.post('/login', userController.login);
+// التحقق من رمز التحقق بعد التسجيل
+router.post('/verify-register-otp', userController.verifyRegisterOtp);
+
+// تسجيل الدخول باستخدام رقم الجوال وإرسال OTP
+router.post('/login-phone', userController.loginWithPhone);
+
+// التحقق من OTP لتسجيل الدخول باستخدام الجوال
+router.post('/verify-login-otp', userController.verifyLoginOtp);
+
+// تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور
+router.post('/login-email', userController.loginWithEmail);
+
+// استعادة كلمة المرور - إرسال OTP
+router.post('/recover-password', userController.recoverPassword);
+
+// إعادة تعيين كلمة المرور بعد التحقق من OTP
+router.post('/reset-password', userController.resetPassword);
 
 
-// تسجيل الخروج
-
-/**
- * @swagger
- * /user/logout:
- *   post:
- *     summary: Logout a user
- *     tags: [User]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User logged out successfully
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.post('/logout', authenticateToken, userController.logout);
+// الحصول على ملف المستخدم الشخصي
+router.get('/profile', authenticateToken, userController.getProfile); // إضافة هذا المسار
 
 
 
-/**
- * @swagger
- * /user/profile:
- *   get:
- *     summary: Get the authenticated user's profile
- *     tags: [User]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User profile
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.get('/profile', authenticateToken, userController.getProfile);
-
-/**
- * @swagger
- * /user/profile:
- *   put:
- *     summary: Update the authenticated user's profile
- *     tags: [User]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *               password:
- *                 type: string
- *     responses:
- *       200:
- *         description: User profile updated
- *       400:
- *         description: Bad request
- *       401:
- *         description: Unauthorized
- *       500:
- *         description: Internal server error
- */
-router.put('/profile', authenticateToken, userController.updateProfile);
-
+// تحديث ملف المستخدم الشخصي
+router.put('/profile', authenticateToken, userController.updateProfile); // إضافة هذا المسار
 
 
 

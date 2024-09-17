@@ -8,19 +8,19 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ message: 'Access denied' });
   }
 
-  const token = authHeader.split(' ')[1];
-  if (!token) {
+  const accessToken = authHeader.split(' ')[1];
+  if (!accessToken) {
     console.log('Access denied: No token provided');
     return res.status(401).json({ message: 'Access denied' });
   }
 
-  if (invalidTokens.includes(token)) {
+  if (invalidTokens.includes(accessToken)) {
     console.log('Access denied: Token is invalid');
     return res.status(401).json({ message: 'Token is invalid' });
   }
 
   try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    const verified = jwt.verify(accessToken, process.env.JWT_SECRET);
     req.user = verified;
     console.log('Token verified, user:', req.user);
     next();

@@ -5,11 +5,21 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+const path = require('path');
+const session = require('express-session');  // إضافة express-session
 require('express-async-errors');
 
 dotenv.config();
 
 const app = express();
+
+// إعداد الجلسات
+app.use(session({
+  secret: 'your-secret-key',  // مفتاح سري للجلسة
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false }  // اجعلها true إذا كنت تستخدم HTTPS
+}));
 
 // إعداد Swagger
 const swaggerOptions = {
@@ -52,10 +62,10 @@ app.use(bodyParser.json());
 
 // Routes
 const userRoutes = require('./routes/user/index');
-const adminRoutes = require('./routes/admin/index'); // تأكد من إضافة هذا السطر
+const adminRoutes = require('./routes/admin/index');
 
 app.use('/user', userRoutes);
-app.use('/admin', adminRoutes); // تأكد من إضافة هذا السطر
+app.use('/admin', adminRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -64,10 +74,11 @@ app.use((err, req, res, next) => {
 });
 
 // Database connection
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
+// Server listening
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
