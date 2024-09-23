@@ -2,22 +2,36 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const User = require('../../models/user');
+// const bcrypt = require('bcrypt');
+// const User = require('../models/User'); // تأكد من مسار الموديل
 
-// توليد رمز تحقق عشوائي
-const generateVerificationCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+// توليد رمز تحقق عشوائي من 4 أرقام
+const generateVerificationCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 
-// Schemas for validation
+// مخطط التسجيل مع تعقيد كلمة المرور
 const registerSchema = Joi.object({
+  firstName: Joi.string().min(2).max(30).required(),
+  lastName: Joi.string().min(2).max(30).required(),
   email: Joi.string().email().required(),
-  phone: Joi.string().min(10).required(),
-  password: Joi.string().min(6).required(),
-  accountType: Joi.string().valid('admin', 'user', 'manager').required()
+  phone: Joi.string().pattern(/^05\d{8}$/).required(),  // يجب أن يبدأ بـ 05 ويحتوي على 10 أرقام
+  password: Joi.string()
+    .min(8).messages({ 'string.min': 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل' })
+    .max(30).messages({ 'string.max': 'كلمة المرور يجب ألا تتجاوز 30 حرفًا' })
+    .pattern(/[a-z]/, { name: 'lowercase' }).messages({ 'string.pattern.name': 'كلمة المرور يجب أن تحتوي على حرف صغير واحد على الأقل' })
+    .pattern(/[A-Z]/, { name: 'uppercase' }).messages({ 'string.pattern.name': 'كلمة المرور يجب أن تحتوي على حرف كبير واحد على الأقل' })
+    .pattern(/[0-9]/, { name: 'numeric' }).messages({ 'string.pattern.name': 'كلمة المرور يجب أن تحتوي على رقم واحد على الأقل' })
+    .pattern(/[@$!%*?&#]/, { name: 'symbol' }).messages({ 'string.pattern.name': 'كلمة المرور يجب أن تحتوي على رمز خاص واحد على الأقل' })
+    .required().messages({ 'any.required': 'حقل كلمة المرور مطلوب' }),
+  accountType: Joi.string().valid('admin', 'user', 'manager').default('user')
 });
 
-const otpSchema = Joi.object({
-  phone: Joi.string().min(10).required(),
-  verificationCode: Joi.string().length(6).required()
+
+ // التحقق من رقم الجوال والرمز معًا باستخدام Joi
+ const otpVerifySchema = Joi.object({
+  phone: Joi.string().pattern(/^05\d{8}$/).required(),  // التحقق من أن رقم الجوال يبدأ بـ 05 ويكون طوله 10 أرقام
+  verificationCode: Joi.string().length(4).pattern(/^\d{4}$/).required()  // التحقق من أن رمز التحقق مكون من 4 أرقام
 });
+
 
 const loginEmailSchema = Joi.object({
   email: Joi.string().email().required(),
@@ -28,11 +42,38 @@ const loginPhoneSchema = Joi.object({
   phone: Joi.string().min(10).required()
 });
 
+
+
+// استيراد مكتبة للتحقق من تعقيد كلمة المرور
+const passwordComplexity = require('joi-password-complexity');
+
+// تحديد تعقيد كلمة المرور المطلوبة
+const complexityOptions = {
+  min: 8,           // الحد الأدنى للطول
+  max: 30,          // الحد الأقصى للطول
+  lowerCase: 1,     // يجب أن تحتوي على حرف صغير واحد على الأقل
+  upperCase: 1,     // يجب أن تحتوي على حرف كبير واحد على الأقل
+  numeric: 1,       // يجب أن تحتوي على رقم واحد على الأقل
+  symbol: 1,        // يجب أن تحتوي على رمز خاص واحد على الأقل
+  requirementCount: 4, // يجب أن تتوافق مع جميع الشروط الأربعة السابقة
+};
+
+// تحديث مخطط التحقق الحالي ليشمل التحقق من تعقيد كلمة المرور
 const passwordResetSchema = Joi.object({
-  phone: Joi.string().min(10).required(),
-  verificationCode: Joi.string().length(6).required(),
-  newPassword: Joi.string().min(6).required()
+  phone: Joi.string().min(10).required().regex(/^05\d+$/, 'رقم الجوال يجب أن يبدأ بـ "05" ويتكون من 10 أرقام').messages({
+    'string.pattern.base': 'رقم الجوال يجب أن يبدأ بـ "05" ويتكون من 10 أرقام',
+  }),
+  verificationCode: Joi.string().length(4).required(),
+  newPassword: Joi.string()
+    .min(8).message('كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل')
+    .max(30).message('كلمة المرور يجب ألا تتجاوز 30 حرفًا')
+    .pattern(/[a-z]/, 'lowercase').message('كلمة المرور يجب أن تحتوي على حرف صغير واحد على الأقل')
+    .pattern(/[A-Z]/, 'uppercase').message('كلمة المرور يجب أن تحتوي على حرف كبير واحد على الأقل')
+    .pattern(/[0-9]/, 'numeric').message('كلمة المرور يجب أن تحتوي على رقم واحد على الأقل')
+    .pattern(/[@$!%*?&#]/, 'symbol').message('كلمة المرور يجب أن تحتوي على رمز خاص واحد على الأقل')
+    .required(),
 });
+
 
 // إنشاء حساب جديد
 exports.register = async (req, res) => {
@@ -40,64 +81,87 @@ exports.register = async (req, res) => {
     if (error) {
       return res.status(400).json({ message: error.details[0].message });
     }
-  
-    const { email, phone, password, accountType } = req.body;
-  
+
+    const { firstName, lastName, email, phone, password, accountType } = req.body;
+
     try {
       let user = await User.findOne({ $or: [{ email }, { phone }] });
       if (user) {
-        return res.status(400).json({ message: 'User already exists' });
+        return res.status(400).json({ message: 'المستخدم موجود بالفعل' });
       }
-  
-      // إرسال رمز التحقق وطباعته في الـ console.log
+
+      // إنشاء رمز التحقق وطباعته في console
       const verificationCode = generateVerificationCode();
       console.log(`رمز التحقق لإنشاء الحساب هو: ${verificationCode}`);
-  
-      // تخزين رمز التحقق في الجلسة
-      req.session.verificationCode = verificationCode;
-      req.session.email = email;
-      req.session.phone = phone;
-      req.session.password = password;
-      req.session.accountType = accountType;
-  
-      // ضبط مؤقت لحذف رمز التحقق بعد 5 دقائق (300,000 مللي ثانية)
+
+      // تخزين جميع بيانات المستخدم في الجلسة، بما في ذلك رمز التحقق
+      req.session.userData = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        password,
+        accountType,
+        verificationCode
+      };
+
+      // ضبط مؤقت لحذف رمز التحقق بعد 5 دقائق
       setTimeout(() => {
-        req.session.verificationCode = null; // حذف رمز التحقق بعد انتهاء المهلة
+        if (req.session.userData) {
+          req.session.userData.verificationCode = null; // حذف رمز التحقق بعد انتهاء المهلة
+        }
       }, 5 * 60 * 1000); // 5 دقائق
-  
+
       res.status(200).json({ message: 'تم إرسال رمز التحقق إلى الجوال (تحقق من الـ console.log).' });
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server error');
+      res.status(500).send('خطأ في الخادم');
     }
-  };
+};
 
 // التحقق من OTP وإكمال إنشاء الحساب
 exports.verifyRegisterOtp = async (req, res) => {
-  const { error } = otpSchema.validate(req.body);
+  // التحقق من رقم الجوال والرمز معًا باستخدام Joi
+  // التحقق من رقم الجوال والرمز معًا باستخدام Joi
+  // const otpVerifySchema = Joi.object({
+  //   phone: Joi.string().pattern(/^05\d{8}$/).required(),  // التحقق من أن رقم الجوال يبدأ بـ 05 ويكون طوله 10 أرقام
+  //   verificationCode: Joi.string().length(4).pattern(/^\d{4}$/).required()  // التحقق من أن رمز التحقق مكون من 4 أرقام
+  // });
+
+  const { error } = otpVerifySchema.validate(req.body);
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
   }
 
-  const { phone, verificationCode } = req.body;
+  const { phone, verificationCode } = req.body; // استخراج رقم الجوال والرمز من الطلب
 
   try {
-    if (req.session.phone !== phone || req.session.verificationCode !== verificationCode) {
-      return res.status(400).json({ message: 'رمز التحقق غير صحيح' });
+    // التحقق من أن الجلسة تحتوي على بيانات المستخدم
+    if (!req.session.userData) {
+      return res.status(400).json({ message: 'انتهت صلاحية الجلسة. حاول مرة أخرى.' });
     }
 
-    const hashedPassword = await bcrypt.hash(req.session.password, 10);
+    // التحقق من أن رقم الجوال والرمز متطابقان مع ما هو مخزن في الجلسة
+    if (req.session.userData.phone !== phone || req.session.userData.verificationCode !== verificationCode) {
+      return res.status(400).json({ message: 'رمز التحقق أو رقم الجوال غير صحيح' });
+    }
 
+    // تشفير كلمة المرور
+    const hashedPassword = await bcrypt.hash(req.session.userData.password, 10);
+
+    // إنشاء حساب المستخدم الجديد
     const newUser = new User({
-      email: req.session.email,
-      phone: req.session.phone,
+      firstName: req.session.userData.firstName,
+      lastName: req.session.userData.lastName,
+      email: req.session.userData.email,
+      phone: req.session.userData.phone,
       password: hashedPassword,
-      accountType: req.session.accountType
+      accountType: req.session.userData.accountType
     });
 
     await newUser.save();
 
-    // إنشاء توكن JWT
+    // إنشاء توكن JWT للمستخدم الجديد
     const payload = {
       id: newUser.id,
       accountType: newUser.accountType
@@ -106,20 +170,24 @@ exports.verifyRegisterOtp = async (req, res) => {
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: 3600 },
+      { expiresIn: 3600 }, // صلاحية التوكن لمدة ساعة واحدة
       (err, accessToken) => {
         if (err) throw err;
         res.json({ accessToken });
       }
     );
 
-    // مسح بيانات الجلسة
+    // مسح بيانات الجلسة بعد نجاح التسجيل
     req.session.destroy();
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).send('خطأ في الخادم');
   }
 };
+
+
+
+  
 
 // تسجيل الدخول باستخدام رقم الجوال وإرسال رمز التحقق
 exports.loginWithPhone = async (req, res) => {
@@ -149,9 +217,16 @@ exports.loginWithPhone = async (req, res) => {
   }
 };
 
+
 // التحقق من OTP لتسجيل الدخول
 exports.verifyLoginOtp = async (req, res) => {
-  const { error } = otpSchema.validate(req.body);
+  // // التحقق من رقم الجوال والرمز معًا باستخدام Joi
+  // const otpVerifySchema = Joi.object({
+  //   phone: Joi.string().pattern(/^05\d{8}$/).required(),  // التحقق من أن رقم الجوال يبدأ بـ 05 ويكون طوله 10 أرقام
+  //   verificationCode: Joi.string().length(4).pattern(/^\d{4}$/).required()  // التحقق من أن رمز التحقق مكون من 4 أرقام
+  // });
+
+  const { error } = otpVerifySchema.validate(req.body);
   if (error) {
     return res.status(400).json({ message: error.details[0].message });
   }
@@ -159,24 +234,27 @@ exports.verifyLoginOtp = async (req, res) => {
   const { phone, verificationCode } = req.body;
 
   try {
-    let user = await User.findOne({ phone, phoneVerificationCode: verificationCode });
+    // البحث عن المستخدم باستخدام رقم الجوال ورمز التحقق
+    const user = await User.findOne({ phone, phoneVerificationCode: verificationCode });
     if (!user) {
-      return res.status(400).json({ message: 'رمز التحقق غير صحيح' });
+      return res.status(400).json({ message: 'رمز التحقق أو رقم الجوال غير صحيح' });
     }
 
     // مسح رمز التحقق بعد التحقق
     user.phoneVerificationCode = null;
     await user.save();
 
+    // إعداد بيانات الـ JWT
     const payload = {
       id: user.id,
       accountType: user.accountType
     };
 
+    // توقيع التوكن JWT وإرساله
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: 3600 },
+      { expiresIn: 3600 }, // صلاحية التوكن لمدة ساعة واحدة
       (err, accessToken) => {
         if (err) throw err;
         res.json({ accessToken });
@@ -184,9 +262,10 @@ exports.verifyLoginOtp = async (req, res) => {
     );
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).send('خطأ في الخادم');
   }
 };
+
 
 // تسجيل الدخول باستخدام البريد الإلكتروني وكلمة المرور
 exports.loginWithEmail = async (req, res) => {
@@ -251,6 +330,7 @@ exports.recoverPassword = async (req, res) => {
   }
 };
 
+
 // إعادة تعيين كلمة المرور
 exports.resetPassword = async (req, res) => {
   const { error } = passwordResetSchema.validate(req.body);
@@ -261,20 +341,23 @@ exports.resetPassword = async (req, res) => {
   const { phone, verificationCode, newPassword } = req.body;
 
   try {
+    // البحث عن المستخدم بناءً على رقم الهاتف ورمز التحقق
     let user = await User.findOne({ phone, phoneVerificationCode: verificationCode });
     if (!user) {
       return res.status(400).json({ message: 'رمز التحقق غير صحيح' });
     }
 
+    // تشفير كلمة المرور الجديدة
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
-    user.phoneVerificationCode = null;
+    user.phoneVerificationCode = null; // مسح رمز التحقق بعد استخدامه
 
+    // حفظ المستخدم
     await user.save();
-    res.status(200).json({ message: 'Password reset successfully.' });
+    res.status(200).json({ message: 'تم إعادة تعيين كلمة المرور بنجاح' });
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('Server error');
+    res.status(500).send('خطاء في الخادم');
   }
 };
 
@@ -342,3 +425,65 @@ exports.updateProfile = async (req, res) => {
     }
   };
   
+
+
+
+  // تغير كلمة المرور 
+
+  // تحديث كلمة المرور
+exports.changePassword = async (req, res) => {
+  // التحقق من صحة البيانات المدخلة باستخدام Joi
+// مخطط التحقق من كلمة المرور القديمة والجديدة
+const schema = Joi.object({
+  oldPassword: Joi.string()
+    .min(1).messages({ 'string.min': 'كلمة المرور القديمة يجب أن تحتوي على حرف واحد على الأقل' })
+    .max(50).messages({ 'string.max': 'كلمة المرور القديمة يجب ألا تتجاوز 50 حرفًا' })
+    .required().messages({ 'any.required': 'حقل كلمة المرور القديمة مطلوب' }),
+
+  newPassword: Joi.string()
+    .min(8).messages({ 'string.min': 'كلمة المرور الجديدة يجب أن تحتوي على 8 أحرف على الأقل' })
+    .max(30).messages({ 'string.max': 'كلمة المرور الجديدة يجب ألا تتجاوز 30 حرفًا' })
+    .pattern(/[a-z]/, { name: 'lowercase' }).messages({ 'string.pattern.name': 'كلمة المرور الجديدة يجب أن تحتوي على حرف صغير واحد على الأقل' })
+    .pattern(/[A-Z]/, { name: 'uppercase' }).messages({ 'string.pattern.name': 'كلمة المرور الجديدة يجب أن تحتوي على حرف كبير واحد على الأقل' })
+    .pattern(/[0-9]/, { name: 'numeric' }).messages({ 'string.pattern.name': 'كلمة المرور الجديدة يجب أن تحتوي على رقم واحد على الأقل' })
+    .pattern(/[@$!%*?&#]/, { name: 'symbol' }).messages({ 'string.pattern.name': 'كلمة المرور الجديدة يجب أن تحتوي على رمز خاص واحد على الأقل' })
+    .required().messages({ 'any.required': 'حقل كلمة المرور الجديدة مطلوب' })
+});
+
+  const { error } = schema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ message: error.details[0].message });
+  }
+
+  const { oldPassword, newPassword } = req.body;
+
+  try {
+    // الحصول على معرف المستخدم من التوكن
+    const userId = req.user.id;
+
+    // البحث عن المستخدم في قاعدة البيانات
+    let user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // التحقق من أن كلمة المرور القديمة صحيحة
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'كلمة المرور القديمة غير صحيحة' });
+    }
+
+    // تشفير كلمة المرور الجديدة
+    const salt = await bcrypt.genSalt(10);
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+    // تحديث كلمة المرور في قاعدة البيانات
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.status(200).json({ message: 'تم تغيير كلمة المرور بنجاح' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('خطاء في الخادم');
+  }
+};

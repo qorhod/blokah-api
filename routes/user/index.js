@@ -34,5 +34,9 @@ router.get('/profile', authenticateToken, userController.getProfile); // إضا�
 router.put('/profile', authenticateToken, userController.updateProfile); // إضافة هذا المسار
 
 
+// تغيير كلمة المرور
+router.post('/change-password', authenticateToken, userController.changePassword); // إضافة مسار تغيير كلمة المرور
+
+
 
 module.exports = router;

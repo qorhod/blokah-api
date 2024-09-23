@@ -5,8 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
-const path = require('path');
-const session = require('express-session');  // إضافة express-session
+const session = require('express-session');  // استيراد express-session
 require('express-async-errors');
 
 dotenv.config();
@@ -15,10 +14,13 @@ const app = express();
 
 // إعداد الجلسات
 app.use(session({
-  secret: 'your-secret-key',  // مفتاح سري للجلسة
+  secret: 'your-secret-key',  // استخدم مفتاح سري قوي في بيئة الإنتاج
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false }  // اجعلها true إذا كنت تستخدم HTTPS
+  cookie: {
+    secure: false,  // اجعلها true إذا كنت تستخدم HTTPS
+    maxAge: 24 * 60 * 60 * 1000  // مدة صلاحية الجلسة (اختياري: 24 ساعة)
+  }
 }));
 
 // إعداد Swagger
@@ -32,7 +34,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:3000'
+        url: process.env.SWAGGER_SERVER_URL  // استخدام المتغير من .env
       }
     ],
     components: {
@@ -57,7 +59,10 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL,  // استخدام المتغير من .env // ضع هنا رابط الواجهة الأمامية الفعلي
+  credentials: true  // السماح بتمرير ملفات تعريف الارتباط (الجلسات)
+}));
 app.use(bodyParser.json());
 
 // Routes
