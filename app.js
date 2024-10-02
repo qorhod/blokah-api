@@ -68,9 +68,13 @@ app.use(bodyParser.json());
 // Routes
 const userRoutes = require('./routes/user/index');
 const adminRoutes = require('./routes/admin/index');
+const authRoutes = require('./routes/auth/index');
 
-app.use('/user', userRoutes);
-app.use('/admin', adminRoutes);
+
+app.use('/api/user', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
+
 
 // Global error handler
 app.use((err, req, res, next) => {
