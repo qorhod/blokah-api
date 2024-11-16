@@ -5,7 +5,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
-const session = require('express-session');  // استيراد express-session
+const session = require('express-session');
 require('express-async-errors');
 
 dotenv.config();
@@ -14,12 +14,12 @@ const app = express();
 
 // إعداد الجلسات
 app.use(session({
-  secret: 'your-secret-key',  // استخدم مفتاح سري قوي في بيئة الإنتاج
+  secret: 'your-secret-key',
   resave: false,
   saveUninitialized: true,
   cookie: {
     secure: false,  // اجعلها true إذا كنت تستخدم HTTPS
-    maxAge: 24 * 60 * 60 * 1000  // مدة صلاحية الجلسة (اختياري: 24 ساعة)
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
@@ -34,7 +34,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: process.env.SWAGGER_SERVER_URL  // استخدام المتغير من .env
+        url: process.env.SWAGGER_SERVER_URL
       }
     ],
     components: {
@@ -60,21 +60,19 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL,  // استخدام المتغير من .env // ضع هنا رابط الواجهة الأمامية الفعلي
-  credentials: true  // السماح بتمرير ملفات تعريف الارتباط (الجلسات)
+  origin: process.env.FRONTEND_URL,
+  credentials: true
 }));
 app.use(bodyParser.json());
 
-// Routes
+// مسارات أخرى
 const userRoutes = require('./routes/user/index');
 const adminRoutes = require('./routes/admin/index');
 const authRoutes = require('./routes/auth/index');
 
-
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
-
 
 // Global error handler
 app.use((err, req, res, next) => {
