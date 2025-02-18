@@ -1,18 +1,254 @@
+// const bcrypt = require('bcryptjs');
+// const jwt = require('jsonwebtoken');
+// const Joi = require('joi');
+// const User = require('../../models/user');
+
+// const axios = require('axios'); // استيراد axios لإرسال طلب إلى Google reCAPTCHA API
+
+// // const bcrypt = require('bcrypt');
+// // const User = require('../models/User'); // تأكد من مسار الموديل
+
+// // توليد رمز تحقق عشوائي من 4 أرقام
+// const generateVerificationCode = () => Math.floor(1000 + Math.random() * 9000).toString();
+
+// // مخطط التسجيل مع تعقيد كلمة المرور
+// // مخطط التسجيل مع تعقيد كلمة المرور وإضافة reCAPTCHA token
+// const registerSchema = Joi.object({
+//   firstName: Joi.string().min(2).max(30).required(),
+//   lastName: Joi.string().min(2).max(30).required(),
+//   email: Joi.string().email().required(),
+//   phone: Joi.string().pattern(/^05\d{8}$/).required(),  // يجب أن يبدأ بـ 05 ويحتوي على 10 أرقام
+//   password: Joi.string()
+//     .min(8).messages({ 'string.min': 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل' })
+//     .max(30).messages({ 'string.max': 'كلمة المرور يجب ألا تتجاوز 30 حرفًا' })
+//     .pattern(/[a-z]/, { name: 'lowercase' }).messages({ 'string.pattern.name': 'كلمة المرور يجب أن تحتوي على حرف صغير واحد على الأقل' })
+//     .pattern(/[A-Z]/, { name: 'uppercase' }).messages({ 'string.pattern.name': 'كلمة المرور يجب أن تحتوي على حرف كبير واحد على الأقل' })
+//     .pattern(/[0-9]/, { name: 'numeric' }).messages({ 'string.pattern.name': 'كلمة المرور يجب أن تحتوي على رقم واحد على الأقل' })
+//     .pattern(/[@$!%*?&#]/, { name: 'symbol' }).messages({ 'string.pattern.name': 'كلمة المرور يجب أن تحتوي على رمز خاص واحد على الأقل' })
+//     .required().messages({ 'any.required': 'حقل كلمة المرور مطلوب' }),
+//   accountType: Joi.string().valid('admin', 'user', 'manager').default('user'),
+//   recaptchaToken: Joi.string().required().messages({ 'any.required': 'رمز reCAPTCHA مطلوب' }) // إضافة recaptchaToken
+// });
+
+
+
+//  // التحقق من رقم الجوال والرمز معًا باستخدام Joi
+//  const otpVerifySchema = Joi.object({
+//   phone: Joi.string().pattern(/^05\d{8}$/).required(),  // التحقق من أن رقم الجوال يبدأ بـ 05 ويكون طوله 10 أرقام
+//   verificationCode: Joi.string().length(4).pattern(/^\d{4}$/).required()  // التحقق من أن رمز التحقق مكون من 4 أرقام
+// });
+
+
+// const loginEmailSchema = Joi.object({
+//   email: Joi.string().email().required(),
+//   password: Joi.string().min(6).required(),
+//   recaptchaToken: Joi.string().required() // إضافة recaptchaToken
+// });
+
+// const loginPhoneSchema = Joi.object({
+//   phone: Joi.string().min(10).regex(/^05\d{8}$/).required(), // تأكد من أن رقم الهاتف يبدأ بـ 05 ويتكون من 10 أرقام
+//   recaptchaToken: Joi.string().required() // إضافة recaptchaToken
+// });
+
+
+
+// // استيراد مكتبة للتحقق من تعقيد كلمة المرور
+// const passwordComplexity = require('joi-password-complexity');
+
+// // تحديد تعقيد كلمة المرور المطلوبة
+// const complexityOptions = {
+//   min: 8,           // الحد الأدنى للطول
+//   max: 30,          // الحد الأقصى للطول
+//   lowerCase: 1,     // يجب أن تحتوي على حرف صغير واحد على الأقل
+//   upperCase: 1,     // يجب أن تحتوي على حرف كبير واحد على الأقل
+//   numeric: 1,       // يجب أن تحتوي على رقم واحد على الأقل
+//   symbol: 1,        // يجب أن تحتوي على رمز خاص واحد على الأقل
+//   requirementCount: 4, // يجب أن تتوافق مع جميع الشروط الأربعة السابقة
+// };
+
+
+
+
+
+// // تحديث مخطط التحقق الحالي ليشمل التحقق من تعقيد كلمة المرور
+// const passwordResetSchema = Joi.object({
+//   phone: Joi.string().min(10).required().regex(/^05\d+$/, 'رقم الجوال يجب أن يبدأ بـ "05" ويتكون من 10 أرقام').messages({
+//     'string.pattern.base': 'رقم الجوال يجب أن يبدأ بـ "05" ويتكون من 10 أرقام',
+//   }),
+//   verificationCode: Joi.string().length(4).required(),
+//   newPassword: Joi.string()
+//     .min(8).message('كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل')
+//     .max(30).message('كلمة المرور يجب ألا تتجاوز 30 حرفًا')
+//     .pattern(/[a-z]/, 'lowercase').message('كلمة المرور يجب أن تحتوي على حرف صغير واحد على الأقل')
+//     .pattern(/[A-Z]/, 'uppercase').message('كلمة المرور يجب أن تحتوي على حرف كبير واحد على الأقل')
+//     .pattern(/[0-9]/, 'numeric').message('كلمة المرور يجب أن تحتوي على رقم واحد على الأقل')
+//     .pattern(/[@$!%*?&#]/, 'symbol').message('كلمة المرور يجب أن تحتوي على رمز خاص واحد على الأقل')
+//     .required(),
+// });
+
+// // اداه لتامين ارسال الكود وتقيده بعدد معين من المحاولات 
+
+
+
+
+// const { RateLimiterMemory } = require('rate-limiter-flexible');
+
+// // إعدادات مكتبة rate-limiter لتحديد عدد المحاولات
+// const maxWrongAttemptsByIP = 20; // الحد الأقصى للمحاولات الفاشلة من نفس الـ IP
+// const limiter = new RateLimiterMemory({
+//   points: maxWrongAttemptsByIP, // عدد المحاولات المسموحة
+//   duration: 15 * 60, // مدة 15 دقيقة قبل إعادة المحاولة
+// });
+// // إنشاء حساب جديد
+// exports.register = async (req, res) => {
+//   const { error } = registerSchema.validate(req.body);
+//   if (error) {
+//     return res.status(400).json({ message: error.details[0].message });
+//   }
+
+//   const { firstName, lastName, email, phone, password, accountType, recaptchaToken } = req.body;
+
+//   try {
+//     // التحقق من reCAPTCHA token
+//     const secretKey = process.env.RECAPTCHA_SECRET_KEY; 
+//     const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
+//     const recaptchaResponse = await axios.post(verificationUrl);
+
+//     // إضافة تتبع للتأكد من الاستجابة
+//     console.log('reCAPTCHA response:', recaptchaResponse.data);
+
+//     if (!recaptchaResponse.data.success || recaptchaResponse.data.score < 0.5) {
+//       return res.status(400).json({ message: 'فشل التحقق من reCAPTCHA. يرجى المحاولة مرة أخرى.' });
+//     }
+
+//     let user = await User.findOne({ $or: [{ email }, { phone }] });
+//     if (user) {
+//       return res.status(400).json({ message: 'المستخدم موجود بالفعل' });
+//     }
+
+//     // إنشاء رمز التحقق وطباعته في console
+//     const verificationCode = generateVerificationCode();
+//     console.log(`رمز التحقق لإنشاء الحساب هو: ${verificationCode}`);
+
+//     // تخزين جميع بيانات المستخدم في الجلسة، بما في ذلك رمز التحقق
+//     req.session.userData = {
+//       firstName,
+//       lastName,
+//       email,
+//       phone,
+//       password,
+//       accountType,
+//       verificationCode,
+//       createdAt: Date.now() 
+//     };
+
+//     // ضبط مؤقت لحذف رمز التحقق بعد 5 دقائق
+//     setTimeout(() => {
+//       if (req.session.userData && (Date.now() - req.session.userData.createdAt >= 5 * 60 * 1000)) {
+//         req.session.userData.verificationCode = null; 
+//         console.log('تم حذف رمز التحقق بعد مرور 5 دقائق.');
+//       }
+//     }, 5 * 60 * 1000); 
+
+//     res.status(200).json({ message: 'تم إرسال رمز التحقق إلى الجوال (تحقق من الـ console.log).' });
+//   } catch (err) {
+//     console.error('Error in register:', err.message);
+//     res.status(500).send('خطأ في الخادم');
+//   }
+// };
+
+
+// // التحقق من OTP وإكمال إنشاء الحساب
+// exports.verifyRegisterOtp = async (req, res) => {
+//   const { error } = otpVerifySchema.validate(req.body);
+//   if (error) {
+//     return res.status(400).json({ message: error.details[0].message });
+//   }
+
+//   const { phone, verificationCode } = req.body; // تم إزالة recaptchaToken
+//   const ipAddr = req.ip; // عنوان IP الخاص بالمستخدم
+
+//   try {
+//     // تم إزالة عملية التحقق من reCAPTCHA
+
+//     // التحقق من الجلسة
+//     if (!req.session.userData) {
+//       return res.status(400).json({ message: 'انتهت صلاحية الجلسة. حاول مرة أخرى.' });
+//     }
+
+//     // التحقق من انتهاء صلاحية رمز التحقق
+//     if (Date.now() - req.session.userData.createdAt >= 5 * 60 * 1000) {
+//       req.session.userData.verificationCode = null;
+//       return res.status(400).json({ message: 'رمز التحقق منتهي الصلاحية. حاول مرة أخرى.' });
+//     }
+
+//     // التحقق من عدد المحاولات الفاشلة
+//     const rateLimiterRes = await limiter.get(ipAddr);
+//     if (rateLimiterRes !== null && rateLimiterRes.consumedPoints >= maxWrongAttemptsByIP) {
+//       const retrySecs = Math.round(rateLimiterRes.msBeforeNext / 1000) || 1;
+//       return res.status(429).json({ message: `تم تجاوز الحد الأقصى للمحاولات. حاول مرة أخرى بعد ${retrySecs} ثانية.` });
+//     }
+
+//     // التحقق من أن رقم الجوال والرمز متطابقان مع ما هو مخزن في الجلسة
+//     if (req.session.userData.phone !== phone || req.session.userData.verificationCode !== verificationCode) {
+//       await limiter.consume(ipAddr); // تسجيل المحاولة الفاشلة
+//       return res.status(400).json({ message: 'رمز التحقق أو رقم الجوال غير صحيح' });
+//     }
+
+//     // تشفير كلمة المرور
+//     const hashedPassword = await bcrypt.hash(req.session.userData.password, 10);
+
+//     // إنشاء حساب المستخدم الجديد
+//     const newUser = new User({
+//       firstName: req.session.userData.firstName,
+//       lastName: req.session.userData.lastName,
+//       email: req.session.userData.email,
+//       phone: req.session.userData.phone,
+//       password: hashedPassword,
+//       accountType: req.session.userData.accountType,
+//     });
+
+//     await newUser.save();
+
+//     // إنشاء توكن JWT للمستخدم الجديد
+//     const payload = {
+//       id: newUser.id,
+//       accountType: newUser.accountType,
+//     };
+
+//     jwt.sign(
+//       payload,
+//       process.env.JWT_SECRET,
+//       { expiresIn: 3600 }, // صلاحية التوكن لمدة ساعة واحدة
+//       (err, accessToken) => {
+//         if (err) throw err;
+//         res.json({ accessToken });
+//       }
+//     );
+
+//     // مسح بيانات الجلسة بعد نجاح التسجيل
+//     req.session.destroy();
+//     await limiter.delete(ipAddr); // إعادة تعيين حد المحاولات بعد النجاح
+//   } catch (err) {
+//     console.error('Error in verifyRegisterOtp:', err.message);
+//     res.status(500).send('خطأ في الخادم');
+//   }
+// };
+
+
+
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const User = require('../../models/user');
-
-const axios = require('axios'); // استيراد axios لإرسال طلب إلى Google reCAPTCHA API
-
-// const bcrypt = require('bcrypt');
-// const User = require('../models/User'); // تأكد من مسار الموديل
+const axios = require('axios'); // لإرسال طلب إلى Google reCAPTCHA API
+const { RateLimiterMemory } = require('rate-limiter-flexible');
 
 // توليد رمز تحقق عشوائي من 4 أرقام
 const generateVerificationCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 
-// مخطط التسجيل مع تعقيد كلمة المرور
-// مخطط التسجيل مع تعقيد كلمة المرور وإضافة reCAPTCHA token
+// مخططات التحقق باستخدام Joi
 const registerSchema = Joi.object({
   firstName: Joi.string().min(2).max(30).required(),
   lastName: Joi.string().min(2).max(30).required(),
@@ -30,76 +266,24 @@ const registerSchema = Joi.object({
   recaptchaToken: Joi.string().required().messages({ 'any.required': 'رمز reCAPTCHA مطلوب' }) // إضافة recaptchaToken
 });
 
-
-
- // التحقق من رقم الجوال والرمز معًا باستخدام Joi
- const otpVerifySchema = Joi.object({
-  phone: Joi.string().pattern(/^05\d{8}$/).required(),  // التحقق من أن رقم الجوال يبدأ بـ 05 ويكون طوله 10 أرقام
-  verificationCode: Joi.string().length(4).pattern(/^\d{4}$/).required()  // التحقق من أن رمز التحقق مكون من 4 أرقام
-});
-
-
-const loginEmailSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().min(6).required(),
-  recaptchaToken: Joi.string().required() // إضافة recaptchaToken
+const otpVerifySchema = Joi.object({
+  phone: Joi.string().pattern(/^05\d{8}$/).required(),  // يجب أن يبدأ بـ 05 ويحتوي على 10 أرقام
+  verificationCode: Joi.string().length(4).pattern(/^\d{4}$/).required()  // يجب أن يكون مكونًا من 4 أرقام
 });
 
 const loginPhoneSchema = Joi.object({
-  phone: Joi.string().min(10).regex(/^05\d{8}$/).required(), // تأكد من أن رقم الهاتف يبدأ بـ 05 ويتكون من 10 أرقام
+  phone: Joi.string().min(10).pattern(/^05\d{8}$/).required(), // تأكد من أن رقم الهاتف يبدأ بـ 05 ويتكون من 10 أرقام
   recaptchaToken: Joi.string().required() // إضافة recaptchaToken
 });
 
-
-
-// استيراد مكتبة للتحقق من تعقيد كلمة المرور
-const passwordComplexity = require('joi-password-complexity');
-
-// تحديد تعقيد كلمة المرور المطلوبة
-const complexityOptions = {
-  min: 8,           // الحد الأدنى للطول
-  max: 30,          // الحد الأقصى للطول
-  lowerCase: 1,     // يجب أن تحتوي على حرف صغير واحد على الأقل
-  upperCase: 1,     // يجب أن تحتوي على حرف كبير واحد على الأقل
-  numeric: 1,       // يجب أن تحتوي على رقم واحد على الأقل
-  symbol: 1,        // يجب أن تحتوي على رمز خاص واحد على الأقل
-  requirementCount: 4, // يجب أن تتوافق مع جميع الشروط الأربعة السابقة
-};
-
-
-
-
-
-// تحديث مخطط التحقق الحالي ليشمل التحقق من تعقيد كلمة المرور
-const passwordResetSchema = Joi.object({
-  phone: Joi.string().min(10).required().regex(/^05\d+$/, 'رقم الجوال يجب أن يبدأ بـ "05" ويتكون من 10 أرقام').messages({
-    'string.pattern.base': 'رقم الجوال يجب أن يبدأ بـ "05" ويتكون من 10 أرقام',
-  }),
-  verificationCode: Joi.string().length(4).required(),
-  newPassword: Joi.string()
-    .min(8).message('كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل')
-    .max(30).message('كلمة المرور يجب ألا تتجاوز 30 حرفًا')
-    .pattern(/[a-z]/, 'lowercase').message('كلمة المرور يجب أن تحتوي على حرف صغير واحد على الأقل')
-    .pattern(/[A-Z]/, 'uppercase').message('كلمة المرور يجب أن تحتوي على حرف كبير واحد على الأقل')
-    .pattern(/[0-9]/, 'numeric').message('كلمة المرور يجب أن تحتوي على رقم واحد على الأقل')
-    .pattern(/[@$!%*?&#]/, 'symbol').message('كلمة المرور يجب أن تحتوي على رمز خاص واحد على الأقل')
-    .required(),
-});
-
-// اداه لتامين ارسال الكود وتقيده بعدد معين من المحاولات 
-
-
-
-
-const { RateLimiterMemory } = require('rate-limiter-flexible');
-
-// إعدادات مكتبة rate-limiter لتحديد عدد المحاولات
+// إعداد Rate Limiter لتحديد عدد المحاولات الفاشلة
 const maxWrongAttemptsByIP = 20; // الحد الأقصى للمحاولات الفاشلة من نفس الـ IP
 const limiter = new RateLimiterMemory({
   points: maxWrongAttemptsByIP, // عدد المحاولات المسموحة
   duration: 15 * 60, // مدة 15 دقيقة قبل إعادة المحاولة
 });
-// إنشاء حساب جديد
+
+// تسجيل المستخدم وإرسال OTP
 exports.register = async (req, res) => {
   const { error } = registerSchema.validate(req.body);
   if (error) {
@@ -114,13 +298,14 @@ exports.register = async (req, res) => {
     const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
     const recaptchaResponse = await axios.post(verificationUrl);
 
-    // إضافة تتبع للتأكد من الاستجابة
+    // تتبع الاستجابة
     console.log('reCAPTCHA response:', recaptchaResponse.data);
 
     if (!recaptchaResponse.data.success || recaptchaResponse.data.score < 0.5) {
       return res.status(400).json({ message: 'فشل التحقق من reCAPTCHA. يرجى المحاولة مرة أخرى.' });
     }
 
+    // التحقق من وجود المستخدم بالفعل
     let user = await User.findOne({ $or: [{ email }, { phone }] });
     if (user) {
       return res.status(400).json({ message: 'المستخدم موجود بالفعل' });
@@ -130,33 +315,42 @@ exports.register = async (req, res) => {
     const verificationCode = generateVerificationCode();
     console.log(`رمز التحقق لإنشاء الحساب هو: ${verificationCode}`);
 
-    // تخزين جميع بيانات المستخدم في الجلسة، بما في ذلك رمز التحقق
-    req.session.userData = {
+    // تشفير كلمة المرور قبل حفظها
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // إنشاء المستخدم مع رمز التحقق ووقت إنشائه
+    user = new User({
       firstName,
       lastName,
       email,
       phone,
-      password,
+      password: hashedPassword,
       accountType,
-      verificationCode,
-      createdAt: Date.now() 
-    };
+      phoneVerificationCode: verificationCode,
+      codeCreatedAt: Date.now()
+    });
 
-    // ضبط مؤقت لحذف رمز التحقق بعد 5 دقائق
-    setTimeout(() => {
-      if (req.session.userData && (Date.now() - req.session.userData.createdAt >= 5 * 60 * 1000)) {
-        req.session.userData.verificationCode = null; 
+    await user.save();
+
+    // إرسال رمز التحقق وطباعته في الـ console.log
+    console.log(`رمز التحقق لإنشاء الحساب هو: ${verificationCode}`);
+    res.status(200).json({ message: 'تم إرسال رمز التحقق إلى الجوال (تحقق من الـ console.log).' });
+
+    // حذف رمز التحقق بعد مرور 5 دقائق
+    setTimeout(async () => {
+      const existingUser = await User.findOne({ phone });
+      if (existingUser && existingUser.phoneVerificationCode === verificationCode) {
+        existingUser.phoneVerificationCode = null;
+        existingUser.codeCreatedAt = null;
+        await existingUser.save();
         console.log('تم حذف رمز التحقق بعد مرور 5 دقائق.');
       }
-    }, 5 * 60 * 1000); 
-
-    res.status(200).json({ message: 'تم إرسال رمز التحقق إلى الجوال (تحقق من الـ console.log).' });
+    }, 5 * 60 * 1000); // 5 دقائق
   } catch (err) {
     console.error('Error in register:', err.message);
     res.status(500).send('خطأ في الخادم');
   }
 };
-
 
 // التحقق من OTP وإكمال إنشاء الحساب
 exports.verifyRegisterOtp = async (req, res) => {
@@ -169,51 +363,42 @@ exports.verifyRegisterOtp = async (req, res) => {
   const ipAddr = req.ip; // عنوان IP الخاص بالمستخدم
 
   try {
-    // تم إزالة عملية التحقق من reCAPTCHA
-
-    // التحقق من الجلسة
-    if (!req.session.userData) {
-      return res.status(400).json({ message: 'انتهت صلاحية الجلسة. حاول مرة أخرى.' });
-    }
-
-    // التحقق من انتهاء صلاحية رمز التحقق
-    if (Date.now() - req.session.userData.createdAt >= 5 * 60 * 1000) {
-      req.session.userData.verificationCode = null;
-      return res.status(400).json({ message: 'رمز التحقق منتهي الصلاحية. حاول مرة أخرى.' });
-    }
-
-    // التحقق من عدد المحاولات الفاشلة
+    // التحقق من عدد المحاولات الفاشلة من نفس IP
     const rateLimiterRes = await limiter.get(ipAddr);
     if (rateLimiterRes !== null && rateLimiterRes.consumedPoints >= maxWrongAttemptsByIP) {
       const retrySecs = Math.round(rateLimiterRes.msBeforeNext / 1000) || 1;
       return res.status(429).json({ message: `تم تجاوز الحد الأقصى للمحاولات. حاول مرة أخرى بعد ${retrySecs} ثانية.` });
     }
 
-    // التحقق من أن رقم الجوال والرمز متطابقان مع ما هو مخزن في الجلسة
-    if (req.session.userData.phone !== phone || req.session.userData.verificationCode !== verificationCode) {
-      await limiter.consume(ipAddr); // تسجيل المحاولة الفاشلة
-      return res.status(400).json({ message: 'رمز التحقق أو رقم الجوال غير صحيح' });
+    // البحث عن المستخدم باستخدام رقم الجوال
+    const user = await User.findOne({ phone });
+    if (!user || !user.phoneVerificationCode) {
+      return res.status(400).json({ message: 'رمز التحقق أو رقم الجوال غير صحيح.' });
     }
 
-    // تشفير كلمة المرور
-    const hashedPassword = await bcrypt.hash(req.session.userData.password, 10);
+    // التحقق من انتهاء صلاحية رمز التحقق (بعد مرور 5 دقائق)
+    const timePassed = Date.now() - user.codeCreatedAt;
+    if (timePassed > 5 * 60 * 1000) {
+      return res.status(400).json({ message: 'رمز التحقق منتهي الصلاحية. يرجى إعادة الإرسال.' });
+    }
 
-    // إنشاء حساب المستخدم الجديد
-    const newUser = new User({
-      firstName: req.session.userData.firstName,
-      lastName: req.session.userData.lastName,
-      email: req.session.userData.email,
-      phone: req.session.userData.phone,
-      password: hashedPassword,
-      accountType: req.session.userData.accountType,
-    });
+    // التحقق من أن رمز التحقق صحيح
+    if (user.phoneVerificationCode !== verificationCode) {
+      // إذا كان رمز التحقق غير صحيح، نسجل المحاولة الفاشلة
+      await limiter.consume(ipAddr); // تسجيل المحاولة الفاشلة
+      return res.status(400).json({ message: 'رمز التحقق أو رقم الجوال غير صحيح.' });
+    }
 
-    await newUser.save();
+    // تحديث حالة التحقق وتفريغ رمز التحقق
+    user.isPhoneVerified = true;
+    user.phoneVerificationCode = null;
+    user.codeCreatedAt = null;
+    await user.save();
 
-    // إنشاء توكن JWT للمستخدم الجديد
+    // إنشاء توكن JWT للمستخدم
     const payload = {
-      id: newUser.id,
-      accountType: newUser.accountType,
+      id: user.id,
+      accountType: user.accountType,
     };
 
     jwt.sign(
@@ -226,14 +411,21 @@ exports.verifyRegisterOtp = async (req, res) => {
       }
     );
 
-    // مسح بيانات الجلسة بعد نجاح التسجيل
-    req.session.destroy();
-    await limiter.delete(ipAddr); // إعادة تعيين حد المحاولات بعد النجاح
+    // إعادة تعيين حد المحاولات بعد النجاح
+    await limiter.delete(ipAddr); // مسح الحد بعد النجاح
   } catch (err) {
     console.error('Error in verifyRegisterOtp:', err.message);
     res.status(500).send('خطأ في الخادم');
   }
 };
+
+
+
+
+
+
+
+
 
 
 

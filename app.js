@@ -59,20 +59,56 @@ const swaggerDocs = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Middleware
+// app.use(cors({
+//   origin: process.env.FRONTEND_URL,
+//   credentials: true
+// }));
+
+// لسماح لجميع المواقع من الوصلو إلا api 
+// app.use(cors({
+//   origin: '*', // السماح لجميع النطاقات
+//   credentials: true
+// }));
+
+
+
+// لحصل النطاقات التي يسمح لها بل وصول إلا api
+ const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3001', // إضافة نطاقات أخرى مسموح بها
+  'http://localhost:3030',
+  'http://172.20.10.13:3001',
+  'http://172.20.10.13:3030'
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
+
+
+
+
 app.use(bodyParser.json());
 
 // مسارات أخرى
 const userRoutes = require('./routes/user/index');
 const adminRoutes = require('./routes/admin/index');
 const authRoutes = require('./routes/auth/index');
+const websiteRoutes = require('./routes/website/index');
+
 
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/website', websiteRoutes);
+
 
 // Global error handler
 app.use((err, req, res, next) => {
