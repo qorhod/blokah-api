@@ -192,9 +192,9 @@ const adSchema = new mongoose.Schema({
   },
   lat: { type: Number },
   lng: { type: Number },
-  district: { type: String },
-  region: { type: String },
-  country: { type: String },
+  district: { type: String }, // الحي 
+  region: { type: String }, // المنطقة
+  country: { type: String }, // الدولة 
 
   // قبول التمويل والنزاعات
   acceptMortgage: {
