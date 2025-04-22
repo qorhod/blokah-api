@@ -266,6 +266,14 @@ const registerSchema = Joi.object({
   recaptchaToken: Joi.string().required().messages({ 'any.required': 'رمز reCAPTCHA مطلوب' }) // إضافة recaptchaToken
 });
 
+const loginEmailSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+  recaptchaToken: Joi.string().required() // إضافة recaptchaToken
+});
+
+
+
 const otpVerifySchema = Joi.object({
   phone: Joi.string().pattern(/^05\d{8}$/).required(),  // يجب أن يبدأ بـ 05 ويحتوي على 10 أرقام
   verificationCode: Joi.string().length(4).pattern(/^\d{4}$/).required()  // يجب أن يكون مكونًا من 4 أرقام

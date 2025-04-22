@@ -51,6 +51,22 @@ router.post('/about/company-info', authenticateToken, websiteController.updateCo
 
 
 
+
+// مسارات رفع وحذف صور صفحة "about"
+router.post('/about/upload-about-images',authenticateToken,websiteController.uploadAboutImages);
+// حذف ضور من نحن 
+router.delete('/about/remove-about-image', authenticateToken,websiteController.removeAboutImage);
+
+// مسارات رفع وحذف شعارات شركاء النجاح
+router.post('/about/upload-company-logos', authenticateToken, websiteController.uploadCompanyLogos);
+router.delete('/about/remove-company-logo', authenticateToken, websiteController.removeCompanyLogo);
+
+
+
+// مسارات رفع وحذف صور صفحة "about"
+
+
+
 // التحكم في معلوامات الموظف في صفحة من نحن 
 
 // التحكم في معلومات الموظف في صفحة "من نحن"
@@ -131,8 +147,13 @@ router.delete('/homepage', authenticateToken, websiteController.deleteHomepage);
 // router.post('/socialMedia', authenticateToken, websiteController.createOrUpdateSocialMedia);
 router.post('/socialMedia', authenticateToken, websiteController.createOrUpdateSocialMediaAndBranches);
 
+// جلب بيانات السوشل ميديا بستخدام رابط الموقع
+router.get('/socialMediaForWebsiteUrl/:websiteUrl', websiteController.getAllSocialMediaForWebsiteUrl);
+
+
 
 router.get('/socialMedia/:domainName', websiteController.getAllSocialMedia);
+
 router.delete('/socialMedia', authenticateToken, websiteController.deleteSocialMediaItem);
 
 
@@ -142,6 +163,8 @@ router.post('/homepage/update', authenticateToken, websiteController.updateHomep
 // جلب بيانات المسخدم بما في ذالك بيانات الصفحات باستخدام اسم الدومين 
 
 router.get('/domain/:domainName', websiteController.getAllUserDataByDomain);
+// جلب بيانات الصفة بساتخدام الرابط 
+router.get('/websiteUrl/:websiteUrl', websiteController.getAllUserDataByDomainForWebsiteUrl);
 
 
 module.exports = router;

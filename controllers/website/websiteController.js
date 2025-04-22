@@ -1,4 +1,8 @@
+
+const SubscriptionPackage  = require('../../models/subscriptionPackage');
+
 const User = require('../../models/user');
+
 const jwt = require('jsonwebtoken');
 const Ad = require('../../models/AdSchema');
 
@@ -189,6 +193,98 @@ exports.getAllSocialMedia = async (req, res) => {
 };
 
 
+// جلب بيانات الشوشل ميدايا باستخدام الرابط كامل
+
+// exports.getAllSocialMediaForWebsiteUrl = async (req, res) => {
+//   try {
+//     const { websiteUrl } = req.params; // استلام websiteUrl من المسار
+//     if (!websiteUrl) {
+//       return res.status(400).json({ message: 'websiteUrl is required' });
+//     }
+
+//     // البحث عن المستخدم باستخدام websiteUrl
+//     const user = await User.findOne({ websiteUrl });
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found with the provided websiteUrl' });
+//     }
+
+//     // التحقق من وجود بيانات في حقل socialMedia
+//     const socialMedia = user.socialMedia || {};
+//     if (Object.keys(socialMedia).length === 0) {
+//       return res.status(404).json({ message: 'No social media accounts found.' });
+//     }
+
+//     // الحصول على الفروع
+//     const branches = user.branches || [];
+
+//     // إعادة الرد مع بيانات socialMedia و branches
+//     res.status(200).json({
+//       message: 'Social media accounts and branches retrieved successfully.',
+//       socialMedia,
+//       branches
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       message: 'Error retrieving social media or branches data',
+//       error
+//     });
+//   }
+// };
+
+
+/**
+ * GET /api/website/:websiteUrl/social-media
+ * يرجع حسابات السوشال ميديا + الفروع استناداً إلى websiteUrl الموجود في SubscriptionPackage
+ */
+exports.getAllSocialMediaForWebsiteUrl = async (req, res) => {
+  try {
+    /*──────────────────── 1) استلام websiteUrl ────────────────────*/
+    const { websiteUrl } = req.params;
+    if (!websiteUrl)
+      return res.status(400).json({ message: 'websiteUrl is required' });
+
+    /*──────────────────── 2) إيجاد الباقة ثم المستخدم ─────────────*/
+    // ابحث عن الباقة التي تحمل هذا الدومين
+    const pkg = await SubscriptionPackage.findOne({
+      'domainInfo.websiteUrl': websiteUrl,
+    });
+
+    if (!pkg)
+      return res.status(404).json({
+        message: 'No subscription found for the provided websiteUrl',
+      });
+
+    // ثم اجلب المستخدم المرتبط بالباقة
+    const user = await User.findById(pkg.user);
+    if (!user)
+      return res.status(404).json({
+        message: 'User not found for the provided websiteUrl',
+      });
+
+    /*──────────────────── 3) تجهيز البيانات ───────────────────────*/
+    const socialMedia = user.socialMedia || {};
+    const branches    = user.branches    || [];
+
+    if (Object.keys(socialMedia).length === 0)
+      return res.status(404).json({ message: 'No social media accounts found.' });
+
+    /*──────────────────── 4) الرد النهائي ─────────────────────────*/
+    return res.status(200).json({
+      message: 'Social media accounts and branches retrieved successfully.',
+      socialMedia,
+      branches,
+    });
+  } catch (error) {
+    console.error('getAllSocialMediaForWebsiteUrl error:', error);
+    return res.status(500).json({
+      message: 'Error retrieving social media or branches data',
+      error,
+    });
+  }
+};
+
+
+
 // كنتول التحكم في بيانت الصفحة الريسيه 
 
 // عدد الصور المسموح به في الصفحة الرئيسية (مثال)
@@ -349,35 +445,6 @@ exports.updateHomepage = (req, res) => {
 // جلب جميع البيانت للمستخدم بما في ذالك بيانات الصفحات 
 
 
-// exports.getAllUserDataByDomain = async (req, res) => {
-//   try {
-//     const { domainName } = req.params;
-
-//     // 1) ابحث عن المستخدم بالاعتماد على domainName
-//     //    لاحظ أننا نستبعد كلمة المرور باستخدام select('-password')
-//     let user = await User.findOne({ domainName })
-//       .select('-password') // نستبعد كلمة المرور
-//       // .populate('ads');    // إذا أردت جلب بيانات الإعلانات المرتبطة
-
-//     if (!user) {
-//       return res.status(404).json({
-//         error: 'المستخدم غير موجود أو اسم النطاق غير صحيح.'
-//       });
-//     }
-
-//     // 2) أعد الاستجابة بجميع البيانات الموجودة في user
-//     return res.status(200).json({
-//       message: 'تم جلب بيانات المستخدم بنجاح',
-//       user
-//     });
-//   } catch (error) {
-//     console.error('Error fetching user by domainName:', error);
-//     return res.status(500).json({
-//       error: 'حدث خطأ أثناء جلب بيانات المستخدم.',
-//       details: error.message
-//     });
-//   }
-// };
 
 
 exports.getAllUserDataByDomain = async (req, res) => {
@@ -443,8 +510,128 @@ exports.getAllUserDataByDomain = async (req, res) => {
 
 
 
+// جلبي بيانات الصفحة باستخدام الرابط 
+// exports.getAllUserDataByDomainForWebsiteUrl = async (req, res) => {
+//   try {
+//     const { websiteUrl } = req.params;
+
+//     // 1) ابحث عن المستخدم بالاعتماد على websiteUrl
+//     let user = await User.findOne({ websiteUrl })
+//       .select('-password'); // نستبعد كلمة المرور
+    
+//     if (!user) {
+//       return res.status(404).json({
+//         error: 'المستخدم غير موجود أو اسم النطاق غير صحيح.'
+//       });
+//     }
+
+//     // 2) نقرأ نوع الفلتر من user.homepage.adFilterType
+//     const filterType = user.homepage?.adFilterType; 
+//     // قد تكون غير موجودة، لذا استخدمنا الاختيار الشرطي (?)
+
+//     // 3) تكوين فلترة الإعلانات حسب نوع الفلتر
+//     //    مع ملاحظة أن الإعلانات مرتبطة بالمستخدم عبر الحقل user (ref: 'User')
+//     //    لذلك يجب أن نشترط أن تكون الإعلانات تابعة لنفس المستخدم
+//     let query = Ad.find({ user: user._id });
+
+//     if (filterType === 'featured') {
+//       // الفلترة: فقط الإعلانات التي هي مميزة
+//       query = query.where({ isFeatured: true });
+//     } else if (filterType === 'discounted') {
+//       // الفلترة: فقط الإعلانات التي فيها خصم 
+//       // يمكنك اختيار الشرط المناسب لك (مثلاً discountPrice != '')
+//       query = query.where({ discountPrice: { $ne: '' } });
+//     } else if (filterType === 'new') {
+//       // الفلترة: آخر 20 إعلان (جديد)
+//       // نرتب حسب تاريخ الإنشاء تنازلياً
+//       query = query.sort({ createdAt: -1 }).limit(5);
+//     }
+//     // في حال لم يكن هناك فلتر أو كان نوع آخر، نجلب جميع إعلانات المستخدم
+
+//     // 4) نفذ الاستعلام لجلب الإعلانات بعد الفلترة
+//     const ads = await query.exec();
+
+//     // 5) بإمكانك إعادة حقول الإعلانات في ردّ منفصل أو تخزينها في user.ads مؤقتًا
+//     //    حتى تصل في الـ response. (لكن غالبًا من الأفضل إرجاعها في حقل مستقل)
+//     //    إذا أردت إرجاعها داخل user نفسه، بإمكانك فعل ذلك:
+//     // user = user.toObject();
+//     // user.ads = ads; 
+//     // أو ببساطة ترسلها في الـ JSON كما تريد
+
+//     return res.status(200).json({
+//       message: 'تم جلب بيانات المستخدم بنجاح',
+//       user: user,  // معلومات المستخدم
+//       ads: ads     // الإعلانات بعد الفلترة
+//     });
+//   } catch (error) {
+//     console.error('Error fetching user by websiteUrl:', error);
+//     return res.status(500).json({
+//       error: 'حدث خطأ أثناء جلب بيانات المستخدم.',
+//       details: error.message
+//     });
+//   }
+// };
 
 
+/**
+ * GET /api/website/:websiteUrl/data
+ * يجلب بيانات المستخدم + الإعلانات، استناداً إلى websiteUrl المحفوظ في SubscriptionPackage
+ */
+exports.getAllUserDataByDomainForWebsiteUrl = async (req, res) => {
+  try {
+    /*──────────────────── 1) التحقق من الـparam ───────────────────*/
+    const { websiteUrl } = req.params;
+    if (!websiteUrl)
+      return res.status(400).json({ error: 'websiteUrl is required' });
+
+    /*──────────────────── 2) إيجاد الباقة ثم المستخدم ────────────*/
+    const pkg = await SubscriptionPackage.findOne({
+      'domainInfo.websiteUrl': websiteUrl,
+    });
+    if (!pkg)
+      return res.status(404).json({ error: 'No subscription matches this websiteUrl' });
+
+    const user = await User.findById(pkg.user).select('-password');
+    if (!user)
+      return res.status(404).json({ error: 'User not found for this websiteUrl' });
+
+    /*──────────────────── 3) قراءة نوع فلتر الإعلانات ────────────*/
+    const filterType = user.homepage?.adFilterType; // featured | discounted | new | undefined
+
+    /*──────────────────── 4) تجهيز استعلام الإعلانات ─────────────*/
+    let query = Ad.find({ user: user._id });
+
+    switch (filterType) {
+      case 'featured':
+        query = query.where({ isFeatured: true });
+        break;
+      case 'discounted':
+        query = query.where({ discountPrice: { $ne: '' } });
+        break;
+      case 'new':
+        query = query.sort({ createdAt: -1 }).limit(20); // آخر 20 إعلان
+        break;
+      default:
+        // بدون فلترة إضافية
+        break;
+    }
+
+    const ads = await query.exec();
+
+    /*──────────────────── 5) الرد ────────────────────────────────*/
+    return res.status(200).json({
+      message: 'تم جلب بيانات المستخدم والإعلانات بنجاح',
+      user,
+      ads,
+    });
+  } catch (error) {
+    console.error('getAllUserDataByDomainForWebsiteUrl error:', error);
+    return res.status(500).json({
+      error: 'حدث خطأ أثناء جلب البيانات.',
+      details: error.message,
+    });
+  }
+};
 
 // التحكم في بيانات صفحة من نحن 
 
@@ -1863,3 +2050,304 @@ exports.deleteHomepage = async (req, res) => {
     res.status(500).json({ message: 'Error deleting homepage data', error });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+// التحكم في بيانات صور الصفحة  من نحن 
+
+
+
+
+exports.uploadAboutImages = (req, res) => {
+  // استدعاء uploadp (مُكوّن Multer) للتعامل مع الملفات المرفوعة
+  uploadp(req, res, async (err) => {
+    if (err) {
+      // خطأ صادر من Multer (مثل حجم الملف أو الامتداد)
+      return res.status(400).json({ error: err.message });
+    }
+
+    try {
+      // 1) التحقق من التوكن
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token) {
+        return res.status(401).json({ message: 'Authorization token is missing' });
+      }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+
+      // 2) جلب المستخدم من قاعدة البيانات
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'المستخدم غير موجود' });
+      }
+
+      // 3) التأكد من وجود كائن about وإعداده إذا لم يكن موجوداً
+      if (!user.about) {
+        user.about = {};
+      }
+      // التأكد من وجود حقل aboutImages داخل about
+      if (!user.about.aboutImages) {
+        user.about.aboutImages = [];
+      }
+
+      // 4) قراءة الملفات المرفوعة من الطلب في حقل aboutImages
+      const aboutImageFiles = req.files?.aboutImages || [];
+
+      // 5) التحقق من العدد الحالي للصور وعدد الصور الجديدة
+      const currentCount = user.about.aboutImages.length;
+      const newImagesCount = aboutImageFiles.length;
+      const maxAllowed = 5;
+      if (currentCount + newImagesCount > maxAllowed) {
+        return res.status(400).json({
+          message: `لا يمكنك رفع الصور، العدد المسموح به هو ${maxAllowed}. الصور الموجودة: ${currentCount}, والصور المراد رفعها: ${newImagesCount}.`
+        });
+      }
+
+      // 6) رفع كل ملف وإضافة الرابط الناتج إلى المصفوفة
+      for (const aboutImageFile of aboutImageFiles) {
+        const aboutImageUrl = await uploadFileToS3p(
+          aboutImageFile,
+          'public-posts', // اسم المجلد في S3
+          userId,
+          'about'       // نوع الصورة أو القسم
+        );
+        if (aboutImageUrl) {
+          user.about.aboutImages.push(aboutImageUrl);
+        }
+      }
+
+      // 7) حفظ التحديثات في قاعدة البيانات
+      await user.save();
+
+      return res.status(200).json({
+        message: 'تم رفع الصور بنجاح',
+        aboutImages: user.about.aboutImages
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: 'حدث خطأ أثناء رفع الصور',
+        details: error.message
+      });
+    }
+  });
+};
+
+
+///
+
+// حذف صوره من من نحن 
+exports.removeAboutImage = async (req, res) => {
+  try {
+    // 1) التحقق من التوكن والحصول على معرف المستخدم
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ message: 'Authorization token is missing' });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    // 2) جلب المستخدم من قاعدة البيانات
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    // التأكد من وجود كائن about وحقله aboutImages
+    if (!user.about || !user.about.aboutImages) {
+      return res.status(404).json({ message: 'لا توجد صور لقسم "من نحن"' });
+    }
+
+    // 3) الحصول على رابط الصورة المراد حذفها من الـ request
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ message: 'Image URL is required' });
+    }
+
+    // 4) التأكد من وجود الصورة في المصفوفة
+    if (!user.about.aboutImages.includes(imageUrl)) {
+      return res.status(404).json({ message: 'الصورة غير موجودة في بيانات المستخدم' });
+    }
+
+    // 5) استخراج مفتاح الملف من الرابط وحذفه من S3
+    const splitted = imageUrl.split('.amazonaws.com/');
+    if (splitted.length > 1) {
+      const fileKey = splitted[1].split('?')[0]; // إزالة أية معاملات بعد المفتاح
+      await deleteFileFromS3p(fileKey);
+      console.log("تم حذف الملف من S3 باستخدام المفتاح:", fileKey);
+    } else {
+      console.log("تعذر استخراج مفتاح الملف من الرابط:", imageUrl);
+    }
+
+    // 6) إزالة الصورة من المصفوفة باستخدام $pull
+    // هنا يجب أن نقوم بتعديل الحقل داخل كائن about
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      { $pull: { 'about.aboutImages': imageUrl } },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: 'تم حذف الصورة بنجاح',
+      aboutImages: updatedUser.about.aboutImages
+    });
+  } catch (error) {
+    console.error("Error in removeAboutImage:", error);
+    return res.status(500).json({
+      message: 'حدث خطأ أثناء حذف الصورة',
+      details: error.message
+    });
+  }
+};
+
+
+
+
+// رفع شعارات شركاء النجاح
+exports.uploadCompanyLogos = (req, res) => {
+  // استخدام uploadp (مُكوّن Multer) للتعامل مع الملفات المرفوعة
+  uploadp(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    try {
+      // 1) التحقق من التوكن
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token) {
+        return res.status(401).json({ message: 'Authorization token is missing' });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+
+      // 2) جلب المستخدم من قاعدة البيانات
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'المستخدم غير موجود' });
+      }
+
+      // التأكد من وجود كائن about وإعداده إذا لم يكن موجوداً
+      if (!user.about) {
+        user.about = {};
+      }
+      // التأكد من وجود حقل companyLogos داخل about
+      if (!user.about.companyLogos) {
+        user.about.companyLogos = [];
+      }
+
+      // 3) قراءة الملفات المرفوعة من الطلب في حقل companyLogos
+      const logoFiles = req.files?.companyLogos || [];
+
+      // 4) التحقق من العدد الحالي للصور وعدد الصور الجديدة
+      const currentCount = user.about.companyLogos.length;
+      const newImagesCount = logoFiles.length;
+      const maxAllowed = 50;
+      if (currentCount + newImagesCount > maxAllowed) {
+        return res.status(400).json({
+          message: `لا يمكنك رفع الصور، العدد المسموح به هو ${maxAllowed}. الصور الموجودة: ${currentCount}, والصور المراد رفعها: ${newImagesCount}.`
+        });
+      }
+
+      // 5) رفع كل ملف وإضافة الرابط الناتج إلى المصفوفة
+      for (const logoFile of logoFiles) {
+        const logoUrl = await uploadFileToS3p(
+          logoFile,
+          'public-posts', // اسم المجلد في S3
+          userId,
+          'companyLogo' // نوع الصورة أو القسم
+        );
+        if (logoUrl) {
+          user.about.companyLogos.push(logoUrl);
+        }
+      }
+
+      // 6) حفظ التحديثات في قاعدة البيانات
+      await user.save();
+
+      return res.status(200).json({
+        message: 'تم رفع شعارات شركاء النجاح بنجاح',
+        companyLogos: user.about.companyLogos
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: 'حدث خطأ أثناء رفع الشعارات',
+        details: error.message
+      });
+    }
+  });
+};
+
+
+
+
+// حذف شعار من حقل شركاء النجاح
+exports.removeCompanyLogo = async (req, res) => {
+  try {
+    // 1) التحقق من التوكن والحصول على معرف المستخدم
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ message: 'Authorization token is missing' });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
+
+    // 2) جلب المستخدم من قاعدة البيانات
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'المستخدم غير موجود' });
+    }
+
+    // التأكد من وجود كائن about وحقل companyLogos
+    if (!user.about || !user.about.companyLogos) {
+      return res.status(404).json({ message: 'لا توجد شعارات في بيانات المستخدم' });
+    }
+
+    // 3) الحصول على رابط الشعار المراد حذفه من الـ request
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ message: 'Image URL is required' });
+    }
+
+    // 4) التأكد من وجود الشعار في المصفوفة
+    if (!user.about.companyLogos.includes(imageUrl)) {
+      return res.status(404).json({ message: 'الشعار غير موجود في بيانات المستخدم' });
+    }
+
+    // 5) استخراج مفتاح الملف من الرابط وحذفه من S3
+    const splitted = imageUrl.split('.amazonaws.com/');
+    if (splitted.length > 1) {
+      const fileKey = splitted[1].split('?')[0];
+      await deleteFileFromS3p(fileKey);
+      console.log("تم حذف الملف من S3 باستخدام المفتاح:", fileKey);
+    } else {
+      console.log("تعذر استخراج مفتاح الملف من الرابط:", imageUrl);
+    }
+
+    // 6) إزالة الشعار من المصفوفة باستخدام $pull على الحقل داخل about
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId },
+      { $pull: { 'about.companyLogos': imageUrl } },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: 'تم حذف الشعار بنجاح',
+      companyLogos: updatedUser.about.companyLogos
+    });
+  } catch (error) {
+    console.error("Error in removeCompanyLogo:", error);
+    return res.status(500).json({
+      message: 'حدث خطأ أثناء حذف الشعار',
+      details: error.message
+    });
+  }
+};
+

@@ -208,6 +208,15 @@ const userSchema = new mongoose.Schema({
     default: 'user'
   },
 
+  // الحقل الجديد لرابط الموقع
+  websiteUrl: {
+    type: String,
+    default: '' 
+  },
+
+
+
+
   // حقول خاصة بالتحقق عبر الهاتف
   phoneVerificationCode: {
     type: String,
@@ -228,13 +237,13 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   },
 
-  // قائمة الإعلانات التي يملكها المستخدم
-  ads: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Ad'
-    }
-  ],
+  // // قائمة الإعلانات التي يملكها المستخدم
+  // ads: [
+  //   {
+  //     type: mongoose.Schema.Types.ObjectId,
+  //     ref: 'Ad'
+  //   }
+  // ],
 
   // الحقول الجديدة للمعلومات الأساسية للموقع
   companyName: {
@@ -259,6 +268,13 @@ const userSchema = new mongoose.Schema({
     default: null
   },
 
+  // حقل خاص باسم السكربت لنطاق المدفوع
+  scriptNamePaidDomain: {
+    type: String,
+    required: false,
+    default: ''
+  },
+
   // بيانات الصفحة الرئيسية (مثال مبسّط)
   homepage: {
 // الحقول الجديدة في كائن homepage:
@@ -274,12 +290,20 @@ companyDescription: {
   type: String,
   required: false // النبذة التعريفية عن الشركة
 },
-images: [
-  {
-    type: String,
-    required: false // روابط الصور
+// images: [
+//   {
+//     type: String,
+//     required: false // روابط الصور
+//   }
+// ],
+
+images: {
+  type: [String],
+  validate: {
+    validator: v => v.length <= 20,
+    message: p => `عدد الصور تجاوز الحد 20`
   }
-],
+},
 foundedDate: {
   type: String,
   required: false // تاريخ تأسيس الشركة
@@ -354,9 +378,14 @@ about: {
   },
 
   // مجالات الشركة (مصفوفة من المجالات)
+  // businessAreas: {
+  //   type: [String], // يمكنك وضعها كسلسلة نصية فقط لو أردت "String" بدلًا من مصفوفة
+  //   required: false
+  // },
+
   businessAreas: {
-    type: [String], // يمكنك وضعها كسلسلة نصية فقط لو أردت "String" بدلًا من مصفوفة
-    required: false
+    type: [String],
+    validate: v => v.length <= 20
   },
 
   // الرسالة
@@ -372,72 +401,140 @@ about: {
   },
 
   // القيم
+  // values: {
+  //   type: [String], // أو يمكنك وضعها كسلسلة واحدة إذا أردت
+  //   required: false
+  // },
   values: {
-    type: [String], // أو يمكنك وضعها كسلسلة واحدة إذا أردت
-    required: false
+    type: [String],
+    validate: v => v.length <= 20
   },
-
   // المزايا التنافسية
+  // competitiveAdvantages: {
+  //   type: [String],
+  //   required: false
+  // },
+
   competitiveAdvantages: {
     type: [String],
-    required: false
+    validate: v => v.length <= 20
   },
 
-  // الهيكل التنظيمي (قائمة بأفراد الفريق وأدوارهم وصورهم)
-  organizationalStructure: [
-    {
-      jobTitle: { // المسمى الوظيفي
-        type: String,
-        required: false
-      },
-      name: { // اسم الشخص
-        type: String,
-        required: false
-      },
-      personalPhotoUrl: { // رابط الصورة الشخصية (يمكن رفعها على Amazon S3 أو أي خدمة أخرى)
-        type: String,
-        required: false
-      }
-    }
-  ],
 
-  // الشهادات والرخص (اسم الشهادة أو الرخصة + رابطها)
-  certificationsAndLicenses: [
-    {
-      certificateName: {
-        type: String,
-        required: false
-      },
-      certificateUrl: { // هنا يمكنك تخزين رابط الشهادة المرفوعة على S3
-        type: String,
-        required: false
-      }
-    }
-  ]
+  // الهيكل التنظيمي (قائمة بأفراد الفريق وأدوارهم وصورهم)
+  // organizationalStructure: [
+  //   {
+  //     jobTitle: { // المسمى الوظيفي
+  //       type: String,
+  //       required: false
+  //     },
+  //     name: { // اسم الشخص
+  //       type: String,
+  //       required: false
+  //     },
+  //     personalPhotoUrl: { // رابط الصورة الشخصية (يمكن رفعها على Amazon S3 أو أي خدمة أخرى)
+  //       type: String,
+  //       required: false
+  //     }
+  //   }
+  // ],
+
+  // // الشهادات والرخص (اسم الشهادة أو الرخصة + رابطها)
+  // certificationsAndLicenses: [
+  //   {
+  //     certificateName: {
+  //       type: String,
+  //       required: false
+  //     },
+  //     certificateUrl: { // هنا يمكنك تخزين رابط الشهادة المرفوعة على S3
+  //       type: String,
+  //       required: false
+  //     }
+  //   }
+  // ],
+// داخل الحقل about ⬇️
+
+// الهيكل التنظيمي (بحد أقصى 50 عضواً)
+organizationalStructure: {
+  type: [{
+    jobTitle:       { type: String },   // المسمى الوظيفي
+    name:           { type: String },   // اسم الشخص
+    personalPhotoUrl: { type: String }  // رابط الصورة الشخصية (S3 أو غيره)
+  }],
+  validate: v => v.length <= 20,        // الحد الأقصى
+  message:  p => `تجاوزت الحد المسموح (20) عضو`
 },
+
+// الشهادات والرخص (بحد أقصى 50 شهادة/رخصة)
+certificationsAndLicenses: {
+  type: [{
+    certificateName: { type: String },  // اسم الشهادة
+    certificateUrl:  { type: String }   // رابط الشهادة في S3
+  }],
+  validate: v => v.length <= 30,
+  message:  p => `تجاوزت الحد المسموح (30) شهادة أو رخصة`
+},
+
+  
+
+  // حقل صور صفحة about
+// aboutImages: {
+//   type: [String],
+//   required: false
+// },
+aboutImages: {
+  type: [String],
+  validate: v => v.length <= 15
+},
+
+// حقل شعارات شركاء النجاح
+// companyLogos: {
+//   type: [String],
+//   required: false
+// }
+companyLogos: {
+  type: [String],
+  validate: v => v.length <= 20
+}
+ },
 
 
   // حقل الفروع
-  branches: [
-    {
-      branchName: {
-        type: String,
-        required: true
-      },
-      locationUrl: {
-        type: String,   // يمكن أن يكون رابط خرائط جوجل أو أي رابط آخر
-        required: false
-      },
-      phoneNumber: {
-        type: String,   // رقم الاتصال لهذا الفرع
-        required: false
-      },
-      whatsappNumber: {
-        type: String,   // رقم/رابط واتساب لهذا الفرع
-        required: false
-      }
-    }
-  ]
+  // branches: [
+  //   {
+  //     branchName: {
+  //       type: String,
+  //       required: true
+  //     },
+  //     locationUrl: {
+  //       type: String,   // يمكن أن يكون رابط خرائط جوجل أو أي رابط آخر
+  //       required: false
+  //     },
+  //     phoneNumber: {
+  //       type: String,   // رقم الاتصال لهذا الفرع
+  //       required: false
+  //     },
+  //     whatsappNumber: {
+  //       type: String,   // رقم/رابط واتساب لهذا الفرع
+  //       required: false
+  //     }
+  //   }
+  // ],
+
+  branches: {
+    type: [{
+      branchName: { type: String, required: true },
+      locationUrl: String,
+      phoneNumber: String,
+      whatsappNumber: String
+    }],
+    validate: v => v.length <= 20
+  }
+
+
+
+
+  
 });
 
 const User = mongoose.model('User', userSchema);

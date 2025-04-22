@@ -1,56 +1,67 @@
 
-
-
-// // هذا لضبط احجام الصور والفيديوهات وعددها التي يتم رفعها إلا امزون 
 // // utils/multerConfig.js
 // const multer = require('multer');
 
-// // حد أقصى لكل نوع
+// // الحدود القصوى للأحجام
 // const MAX_IMAGE_SIZE = 2 * 1024 * 1024;    // 2MB للصور
-// const MAX_VIDEO_SIZE = 50 * 1024 * 1024;   // 50MB للفيديو
+// const MAX_VIDEO_SIZE = 50 * 1024 * 1024;     // 50MB للفيديو
+// const MAX_PDF_SIZE   = 5 * 1024 * 1024;      // 5MB لملفات PDF
 
-// // التخزين المؤقت في الذاكرة
+// // التخزين المؤقت في الذاكرة (لرفع الملفات إلى S3 لاحقًا)
 // const storage = multer.memoryStorage();
 
 // /**
-//  * الفلتر (fileFilter) يتحقق من:
-//  * 1) هل الحقل "images" أم "videos"؟
-//  * 2) هل نوع الملف (mimetype) مدعوم؟
-//  * 3) هل الحجم ضمن الحد المناسب (2MB للصور، 50MB للفيديو)؟
+//  * دالة الفلترة (fileFilter):
+//  * - تقبل صور الحقول: images, personalPhotos, aboutImages
+//  * - تقبل الفيديوهات لحقل videos
+//  * - تقبل ملفات PDF لحقل certificates
+//  * - تقبل صور الشهادات لحقل certificateUrl
 //  */
 // function fileFilter(req, file, cb) {
-//   // الصيغ المسموحة للصور
+//   // الأنواع المسموحة للصور
 //   const allowedImageTypes = [
 //     'image/jpeg',
 //     'image/png',
 //     'image/webp'
 //   ];
 
-//   // الصيغ المسموحة للفيديو
+//   // الأنواع المسموحة للفيديو
 //   const allowedVideoTypes = [
 //     'video/mp4',
 //     'video/quicktime',
 //     'video/webm'
 //   ];
 
-//   if (file.fieldname === 'images') {
-//     // 1) تحقق من mimetype
+//   // الأنواع المسموحة لـ PDF
+//   const allowedPdfTypes = [
+//     'application/pdf'
+//   ];
+
+//   // التحقق من اسم الحقل والأنواع والحجم المناسب
+
+//   if (file.fieldname === 'images' ||
+//       file.fieldname === 'personalPhotos' ||
+//       file.fieldname === 'aboutImages'||
+//       file.fieldname === 'companyLogos'
+
+      
+//     ) {
+//     // هذه الحقول مخصصة للصور فقط
 //     if (!allowedImageTypes.includes(file.mimetype)) {
 //       return cb(
-//         new Error('لا يسمح إلا بصور JPG/PNG/WEBP في حقل "images"'),
+//         new Error(`لا يسمح إلا بصور JPG/PNG/WEBP في حقل "${file.fieldname}"`),
 //         false
 //       );
 //     }
-//     // 2) تحقق من الحجم
 //     if (file.size > MAX_IMAGE_SIZE) {
 //       return cb(
-//         new Error(`حجم الصورة أكبر من ${MAX_IMAGE_SIZE / (1024 * 1024)}MB`),
+//         new Error(`حجم الصورة في حقل "${file.fieldname}" أكبر من ${MAX_IMAGE_SIZE / (1024 * 1024)}MB`),
 //         false
 //       );
 //     }
-//     cb(null, true);
-
+//     return cb(null, true);
 //   } else if (file.fieldname === 'videos') {
+//     // حقل الفيديوهات
 //     if (!allowedVideoTypes.includes(file.mimetype)) {
 //       return cb(
 //         new Error('لا يسمح إلا بفيديوهات MP4/MOV/WEBM في حقل "videos"'),
@@ -63,27 +74,62 @@
 //         false
 //       );
 //     }
-//     cb(null, true);
-
+//     return cb(null, true);
+//   } else if (file.fieldname === 'certificates') {
+//     // حقل ملفات PDF
+//     if (!allowedPdfTypes.includes(file.mimetype)) {
+//       return cb(
+//         new Error('لا يسمح إلا بملفات PDF في حقل "certificates"'),
+//         false
+//       );
+//     }
+//     if (file.size > MAX_PDF_SIZE) {
+//       return cb(
+//         new Error(`حجم ملف PDF أكبر من ${MAX_PDF_SIZE / (1024 * 1024)}MB`),
+//         false
+//       );
+//     }
+//     return cb(null, true);
+//   } else if (file.fieldname === 'certificateUrl') {
+//     // حقل صور الشهادات (يقبل فقط صور)
+//     if (!allowedImageTypes.includes(file.mimetype)) {
+//       return cb(
+//         new Error('لا يسمح إلا بصور JPG/PNG/WEBP في حقل "certificateUrl"'),
+//         false
+//       );
+//     }
+//     if (file.size > MAX_IMAGE_SIZE) {
+//       return cb(
+//         new Error(`حجم الصورة في حقل "certificateUrl" أكبر من ${MAX_IMAGE_SIZE / (1024 * 1024)}MB`),
+//         false
+//       );
+//     }
+//     return cb(null, true);
 //   } else {
-//     // أي حقل آخر غير متوقع
+//     // حقل غير متوقع
 //     return cb(new Error(`اسم الحقل غير مسموح: ${file.fieldname}`), false);
 //   }
 // }
 
-// // ضبط الحقول: 10 صور، 3 فيديوهات
-// // نضع limits.fileSize=50MB حتى يمكن لـMulter قراءة الملفات حتى 50MB.
-// // ولو كانت صورة فوق 2MB، سيرفضها fileFilter يدويًا.
+// // تهيئة Multer مع حدود عامة (50MB للملف الواحد)
 // const upload = multer({
 //   storage,
-//   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB حداً أقصى ليتمكن من قراءة الفيديوهات الكبيرة
+//   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB حداً أقصى لكل ملف
 //   fileFilter
 // }).fields([
-//   { name: 'images', maxCount: 10 },  // حتى 10 صور
-//   { name: 'videos', maxCount: 3 }    // حتى 3 فيديوهات
+//   { name: 'images', maxCount: 10 },         // حقل images (حتى 10 صور)
+//   { name: 'videos', maxCount: 3 },          // حقل videos (حتى 3 فيديوهات)
+//   { name: 'personalPhotos', maxCount: 10 }, // حقل صور الموظفين (حتى 10)
+//   { name: 'certificates', maxCount: 1 },    // حقل ملفات PDF (حتى 1 ملف)
+//   { name: 'certificateUrl', maxCount: 1 },  // حقل صور الشهادات (حتى 1 صورة)
+//   { name: 'aboutImages', maxCount: 10 },
+//   { name: 'companyLogos', maxCount: 10 }
+
+//        // حقل aboutImages (حتى 10 صور، يمكنك ضبط العدد حسب الحاجة)
 // ]);
 
 // module.exports = upload;
+
 
 
 
@@ -93,16 +139,17 @@ const multer = require('multer');
 // الحدود القصوى للأحجام
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;    // 2MB للصور
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024;   // 50MB للفيديو
-const MAX_PDF_SIZE   = 5 * 1024 * 1024;    // 5MB لملفات PDF (إن بقي حقل آخر يسمح بها)
+const MAX_PDF_SIZE   = 5 * 1024 * 1024;    // 5MB لملفات PDF
 
 // التخزين المؤقت في الذاكرة (لرفع الملفات إلى S3 لاحقًا)
 const storage = multer.memoryStorage();
 
 /**
- * الفلتر (fileFilter) يتحقق من:
- * 1) اسم الحقل (fieldname).
- * 2) هل نوع الملف (mimetype) مدعوم؟
- * 3) هل الحجم ضمن الحد المناسب؟
+ * دالة الفلترة (fileFilter):
+ * - تقبل صور الحقول: images, personalPhotos, aboutImages, companyLogos, logo
+ * - تقبل الفيديوهات لحقل videos
+ * - تقبل ملفات PDF لحقل certificates
+ * - تقبل صور الشهادات لحقل certificateUrl
  */
 function fileFilter(req, file, cb) {
   // الأنواع المسموحة للصور
@@ -119,14 +166,20 @@ function fileFilter(req, file, cb) {
     'video/webm'
   ];
 
-  // الأنواع المسموحة لـ PDF (لو بقي حقل آخر يحتاجه)
+  // الأنواع المسموحة لـ PDF
   const allowedPdfTypes = [
     'application/pdf'
   ];
 
-  // التحقق من اسم الحقل
-  if (file.fieldname === 'images' || file.fieldname === 'personalPhotos') {
-    // حقل للصور (images أو personalPhotos)
+  // التحقق من اسم الحقل والأنواع والحجم المناسب
+  if (
+    file.fieldname === 'images' ||
+    file.fieldname === 'personalPhotos' ||
+    file.fieldname === 'aboutImages' ||
+    file.fieldname === 'companyLogos' ||
+    file.fieldname === 'logo'
+  ) {
+    // هذه الحقول مخصصة للصور فقط
     if (!allowedImageTypes.includes(file.mimetype)) {
       return cb(
         new Error(`لا يسمح إلا بصور JPG/PNG/WEBP في حقل "${file.fieldname}"`),
@@ -139,10 +192,10 @@ function fileFilter(req, file, cb) {
         false
       );
     }
-    cb(null, true);
+    return cb(null, true);
 
   } else if (file.fieldname === 'videos') {
-    // حقل للفيديوهات
+    // حقل الفيديوهات
     if (!allowedVideoTypes.includes(file.mimetype)) {
       return cb(
         new Error('لا يسمح إلا بفيديوهات MP4/MOV/WEBM في حقل "videos"'),
@@ -155,10 +208,10 @@ function fileFilter(req, file, cb) {
         false
       );
     }
-    cb(null, true);
+    return cb(null, true);
 
   } else if (file.fieldname === 'certificates') {
-    // حقل ملفات PDF (لو ظل مستخدَماً لمسار آخر)
+    // حقل ملفات PDF
     if (!allowedPdfTypes.includes(file.mimetype)) {
       return cb(
         new Error('لا يسمح إلا بملفات PDF في حقل "certificates"'),
@@ -167,14 +220,14 @@ function fileFilter(req, file, cb) {
     }
     if (file.size > MAX_PDF_SIZE) {
       return cb(
-        new Error(`حجم ملف الـ PDF أكبر من ${MAX_PDF_SIZE / (1024 * 1024)}MB`),
+        new Error(`حجم ملف PDF أكبر من ${MAX_PDF_SIZE / (1024 * 1024)}MB`),
         false
       );
     }
-    cb(null, true);
+    return cb(null, true);
 
   } else if (file.fieldname === 'certificateUrl') {
-    // <-- نعدله ليقبل الصور فقط
+    // حقل صور الشهادات (يقبل فقط صور)
     if (!allowedImageTypes.includes(file.mimetype)) {
       return cb(
         new Error('لا يسمح إلا بصور JPG/PNG/WEBP في حقل "certificateUrl"'),
@@ -187,7 +240,7 @@ function fileFilter(req, file, cb) {
         false
       );
     }
-    cb(null, true);
+    return cb(null, true);
 
   } else {
     // حقل غير متوقع
@@ -195,17 +248,20 @@ function fileFilter(req, file, cb) {
   }
 }
 
-// تهيئة Multer مع الحدود العامة (50MB للقراءة)
+// تهيئة Multer مع حدود عامة (50MB للملف الواحد)
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB حداً أقصى قبل الرفض
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB حداً أقصى لكل ملف
   fileFilter
 }).fields([
   { name: 'images', maxCount: 10 },         // حقل images (حتى 10 صور)
   { name: 'videos', maxCount: 3 },          // حقل videos (حتى 3 فيديوهات)
   { name: 'personalPhotos', maxCount: 10 }, // حقل صور الموظفين (حتى 10)
-  { name: 'certificates', maxCount: 1 },    // حقل ملفات PDF (حتى 1 ملف) لو بقي في مشروعك
-  { name: 'certificateUrl', maxCount: 1 }   // حقل صور الشهادات الآن (حتى 1 صورة)
+  { name: 'certificates', maxCount: 1 },    // حقل ملفات PDF (حتى 1 ملف)
+  { name: 'certificateUrl', maxCount: 1 },  // حقل صور الشهادات (حتى 1 صورة)
+  { name: 'aboutImages', maxCount: 10 },    // حقل aboutImages (حتى 10 صور)
+  { name: 'companyLogos', maxCount: 10 },   // حقل companyLogos (حتى 10 صور)
+  { name: 'logo', maxCount: 1 }             // حقل logo (صورة واحدة)
 ]);
 
 module.exports = upload;

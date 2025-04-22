@@ -139,10 +139,17 @@ router.get('/profile/domain/:domainName', userController.getUserByDomain);
 
 router.get('/ads/:domainName/:id', userController.getAdById);
 
+
+// عرض الخريطة باسخدام الرابط 
+
+router.get('/ads/websiteUrl/:websiteUrl/:id', userController.getAdByIdForWebsiteUrl);
+
 // خاص في في تغذية الخريطه 
 
 router.post('/ads/map',upload.none(), userController.getAdsWithinBounds);
 
+// خاص في تغذيه الخريطه باستخدام الرابط 
+router.post('/ads/mapForWebsiteUrl',upload.none(), userController.getAdsWithinBoundsForWebsiteUrl);
 
 
 
@@ -176,8 +183,31 @@ router.delete('/ads/1/:adId',authenticateToken, userController.deleteAdd);
 router.post('/ads/state/:adId', authenticateToken, userController.updateAdState);
 
 
+// إضافه وتعديل رابط الموقع هذا موقت لتطوير فق 
+// router.post('/websiteUrl', userController.createOrUpdateWebsiteUrl);
+
+// الاستعلام عن الملومات الاستلاسه باستخدام رابط الموقع 
+
+router.get('/profile/websiteUrl/:websiteUrl', userController.getUserByWebsiteUrl);
 
 
+// الاستعلام عن اسم السكربت باستخدام الرابط 
+router.post('/getScriptInfo', userController.getScriptInfoByWebsiteUrl);
+
+
+
+// فلتر احضار جميع المدن وعن الاخيار  مدينه يجلب الاحيا الخاصه فيها 
+
+router.get('/cities-and-districts', userController.getCitiesAndDistrictsByWebsiteUrl);
+
+
+
+// التحكم في اللوقو 
+
+router.post('/logo', authenticateToken, userController.uploadOrUpdateLogo);
+
+// مسار لحذف الشعار
+router.delete('/logo', authenticateToken, userController.deleteLogo);
 
 
 
