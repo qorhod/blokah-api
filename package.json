@@ -32,7 +32,8 @@
     "rate-limiter-flexible": "^5.0.3",
     "react-google-recaptcha-v3": "^1.10.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

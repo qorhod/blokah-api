@@ -220,12 +220,12 @@ app.use(bodyParser.json());
 
 /* ─────────────────────────── Routes ─────────────────────────── */
 const userRoutes                 = require('./routes/user/index');
-// const adminRoutes                = require('./routes/admin/index');
+const adminRoutes                = require('./routes/admin/index');
 const authRoutes                 = require('./routes/auth/index');
 const websiteRoutes              = require('./routes/website/index');
 
 app.use('/api/user',                       userRoutes);
-// app.use('/api/admin',                      adminRoutes);
+app.use('/api/admin',                      adminRoutes);
 app.use('/api/auth',                       authRoutes);
 app.use('/api/website',                    websiteRoutes);
 

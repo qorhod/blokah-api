@@ -17,31 +17,67 @@
 
 /////////////////الكود السليم الاساسي فوق /////////////
 
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 
+// const bcrypt = require('bcryptjs');
+// const jwt = require('jsonwebtoken');
+// const Joi = require('joi');
+// const SubscriptionPackage = require('../../models/subscriptionPackage');
+
+// const User = require('../../models/user');
+// const Ad = require('../../models/AdSchema');
+// const axios = require('axios');
+// const multer = require('multer');
+// const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+// //<<<<<<<<<<<<<<
+// // controllers/adController.js (مثال)
+// const {
+//   uploadFileToS3p,
+//   deleteFileFromS3p,
+//   uploadMultipleFilesToS3p
+// } = require('../../utils/s3Service');
+
+// const uploadp = require('../../utils/multerConfig'); // Multer لضبط عدد الملفات وحجمها
+// const { convertMovToMp4 } = require('../../utils/videoConvert'); // تحويل صيغ الفيديو إلى mp4
+// const { updateAdFields } = require('./service/adServices'); // داله فيها الاشا النصينه حق ركوست انشا العلان لانه الركوس بيصير طويل فقررنا انحن نقسمها 
+
+// // إعداد S3
+// const s3 = new S3Client({
+//   region: process.env.AWS_REGION,
+//   credentials: {
+//     accessKeyId: process.env.AWS_ACCESS_KEY,
+//     secretAccessKey: process.env.AWS_SECRET_KEY,
+//   },
+// });
+
+
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
-const SubscriptionPackage = require('../../models/subscriptionPackage');
-
-const User = require('../../models/user');
-const Ad = require('../../models/AdSchema');
 const axios = require('axios');
 const multer = require('multer');
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-//<<<<<<<<<<<<<<
-// controllers/adController.js (مثال)
+
+const SubscriptionPackage = require('../../models/subscriptionPackage');
+const User = require('../../models/user');
+const Ad = require('../../models/AdSchema');
+
 const {
   uploadFileToS3p,
   deleteFileFromS3p,
   uploadMultipleFilesToS3p
 } = require('../../utils/s3Service');
 
-const uploadp = require('../../utils/multerConfig'); // Multer لضبط عدد الملفات وحجمها
-const { convertMovToMp4 } = require('../../utils/videoConvert'); // تحويل صيغ الفيديو إلى mp4
-const { updateAdFields } = require('./service/adServices'); // داله فيها الاشا النصينه حق ركوست انشا العلان لانه الركوس بيصير طويل فقررنا انحن نقسمها 
+const {
+  uploadSingle,
+  uploadMultiple,
+  uploadp // raw multer
+} = require('../../utils/multerConfig');
 
-// إعداد S3
+const { convertMovToMp4 } = require('../../utils/videoConvert');
+const { updateAdFields } = require('./service/adServices');
+
+const { S3Client } = require('@aws-sdk/client-s3');
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
@@ -50,11 +86,8 @@ const s3 = new S3Client({
   },
 });
 
-
-
-
-
-
+const MAX_IMAGES = 20;
+const MAX_VIDEOS = 10;
 
 
 
@@ -127,12 +160,259 @@ exports.createDraftAd = async (req, res) => {
  */
 // مثال: adController.js
 
-const MAX_IMAGES = 10;
-const MAX_VIDEOS = 3;
+// const MAX_IMAGES = 10;
+// const MAX_VIDEOS = 3;
 // اهم داله عندي وهي مسوله عن انشاء وتعديل الاعلان 
-exports.updateAdMedia = (req, res) => {
-  // ميدل وير Multer
-  uploadp(req, res, async (err) => {
+// exports.updateAdMedia = (req, res) => {
+//   // ميدل وير Multer
+//   uploadp(req, res, async (err) => {
+//     if (err) {
+//       return res.status(400).json({ error: err.message });
+//     }
+
+//     try {
+//       const adId = req.params.adId;
+//       const userId = req.user?.id;
+
+//       // 1) العثور على الإعلان في DB
+//       const ad = await Ad.findById(adId);
+//       if (!ad) {
+//         return res.status(404).json({ error: 'الإعلان غير موجود.' });
+//       }
+
+//       // =========== [A] جلب بيانات الحقول من jsonData إن وُجد ===========
+//       let parsedData = req.body; // fallback
+//       if (req.body.jsonData) {
+//         // إذا وجدنا حقلاً اسمه jsonData سنعتمده
+//         try {
+//           parsedData = JSON.parse(req.body.jsonData);
+//         } catch (parseErr) {
+//           console.error('خطأ أثناء JSON.parse:', parseErr);
+//           // يمكنك إعادة خطأ أو تجاهل الخطأ أو التعامل معه كما يناسبك
+//         }
+//       }
+
+//       // 2) تحديث الحقول النصية/الرقمية عبر الدالة adServices.js
+//       updateAdFields(ad, parsedData);
+
+//       // ======== [منطق تغيير الحالة] =========
+//       // إذا كانت حالة الإعلان حاليًا "مسودة"، نقوم بتحويلها إلى "منشور".
+//       // إذا كانت الحالة "غير مكتمل" أو "منشور"، نبقيها كما هي.
+//       if (ad.status === 'مسودة') {
+//         ad.status = 'منشور';
+//       }
+
+//       // 2.5) حذف الصور/الفيديوهات القديمة
+//       let { deletedImages, deletedVideos } = req.body;
+//       // حذف الصور القديمة
+//       if (deletedImages) {
+//         if (typeof deletedImages === 'string') {
+//           try {
+//             deletedImages = JSON.parse(deletedImages);
+//           } catch (e) {
+//             // لو فشل parse، نعاملها كقيمة واحدة
+//           }
+//         }
+//         const imagesToDelete = Array.isArray(deletedImages)
+//           ? deletedImages
+//           : [deletedImages];
+
+//         for (const imgUrl of imagesToDelete) {
+//           ad.images = ad.images.filter(link => link !== imgUrl);
+
+//           const splitted = imgUrl.split('.com/');
+//           if (splitted.length < 2) continue;
+
+//           let fileKey = splitted[1].split('?')[0];
+//           await deleteFileFromS3p(fileKey);
+//         }
+//       }
+
+//       // حذف الفيديوهات القديمة
+//       if (deletedVideos) {
+//         if (typeof deletedVideos === 'string') {
+//           try {
+//             deletedVideos = JSON.parse(deletedVideos);
+//           } catch (e) {
+//             // قيمة مفردة
+//           }
+//         }
+//         const videosToDelete = Array.isArray(deletedVideos)
+//           ? deletedVideos
+//           : [deletedVideos];
+
+//         for (const vidUrl of videosToDelete) {
+//           ad.videos = ad.videos.filter(link => link !== vidUrl);
+
+//           const splitted = vidUrl.split('.com/');
+//           if (splitted.length < 2) continue;
+
+//           let fileKey = splitted[1].split('?')[0];
+//           await deleteFileFromS3p(fileKey);
+//         }
+//       }
+
+//       // 3) حفظ الإعلان بعد تحديث الحقول وحذف القديم
+//       await ad.save();
+
+//       // 4) تحقق من الحد الأقصى قبل إضافة ملفات جديدة
+//       const images = req.files.images || [];
+//       const videos = req.files.videos || [];
+
+//       const currentImagesCount = ad.images.length;
+//       const currentVideosCount = ad.videos.length;
+
+//       // هل نتجاوز الحد الأقصى للصور؟
+//       if (currentImagesCount + images.length > MAX_IMAGES) {
+//         return res.status(400).json({
+//           error: `تجاوزت الحد الأقصى للصور. لديك حاليًا ${currentImagesCount} صورة، وحاولت إضافة ${images.length} ليصبح المجموع ${
+//             currentImagesCount + images.length
+//           }، والحد الأقصى هو ${MAX_IMAGES}.`
+//         });
+//       }
+
+//       // هل نتجاوز الحد الأقصى للفيديوهات؟
+//       if (currentVideosCount + videos.length > MAX_VIDEOS) {
+//         return res.status(400).json({
+//           error: `تجاوزت الحد الأقصى للفيديوهات. لديك حاليًا ${currentVideosCount} فيديو، وحاولت إضافة ${videos.length} ليصبح المجموع ${
+//             currentVideosCount + videos.length
+//           }، والحد الأقصى هو ${MAX_VIDEOS}.`
+//         });
+//       }
+
+//       // 5) تحويل أي فيديو MOV أو WebM إلى MP4 قبل الرفع
+//       for (const file of videos) {
+//         if (
+//           file.mimetype === 'video/quicktime' ||
+//           file.mimetype === 'video/webm'
+//         ) {
+//           const mp4Buffer = await convertMovToMp4(file.buffer);
+//           file.buffer = mp4Buffer;
+//           file.mimetype = 'video/mp4';
+//         }
+//       }
+
+//       // 6) رفع الملفات (صور + فيديوهات) إلى S3
+//       const imageLinks = await uploadMultipleFilesToS3p(images, 'public-posts', userId, adId);
+//       const videoLinks = await uploadMultipleFilesToS3p(videos, 'public-posts', userId, adId);
+
+//       // 7) إضافة الروابط
+//       ad.images.push(...imageLinks);
+//       ad.videos.push(...videoLinks);
+
+//       // 8) حفظ التعديلات النهائية
+//       await ad.save();
+// console.log(ad)
+//       return res.status(200).json({
+//         message: 'تم تحديث ملفات الإعلان بنجاح (مع تحويل MOV/WebM إلى MP4).',
+//         ad: ad,   // عرض كامل معلومات الإعلان
+//         images: ad.images,
+//         videos: ad.videos
+//       }
+//     );
+
+//     } catch (error) {
+//       console.error('Error updating ad media:', error);
+//       return res.status(500).json({
+//         error: 'حدث خطأ أثناء تحديث ملفات الإعلان.',
+//         details: error.message
+//       });
+//     }
+//   });
+// };
+
+
+// {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{منطقة تطوير ركوست تعديل الإعلان }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+
+
+exports.uploadImage = (req, res) => {
+  uploadSingle(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+
+    try {
+      const userId = req.user.id;
+      const adId = req.body.adId;
+      if (!adId) return res.status(400).json({ error: 'يجب إرسال معرف الإعلان.' });
+
+      const ad = await Ad.findById(adId);
+      if (!ad || ad.user.toString() !== userId)
+        return res.status(404).json({ error: 'الإعلان غير موجود أو لا يتبعك.' });
+
+      if (!req.file || !req.file.mimetype.startsWith('image/'))
+        return res.status(400).json({ error: 'الملف المرسل ليس صورة.' });
+
+      if (ad.images.length >= MAX_IMAGES)
+        return res.status(400).json({ error: `تجاوزت الحد الأقصى للصور (${MAX_IMAGES})` });
+
+      const links = await uploadMultipleFilesToS3p([req.file], 'public-posts', userId, adId);
+      ad.images.push(links[0]);
+      await ad.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'تم رفع الصورة بنجاح.',
+        link: links[0],
+        currentCount: ad.images.length
+      });
+
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'فشل في رفع الصورة.' });
+    }
+  });
+};
+
+exports.uploadVideo = (req, res) => {
+  uploadSingle(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+
+    try {
+      const userId = req.user.id;
+      const adId = req.body.adId;
+      if (!adId) return res.status(400).json({ error: 'يجب إرسال معرف الإعلان.' });
+
+      const ad = await Ad.findById(adId);
+      if (!ad || ad.user.toString() !== userId)
+        return res.status(404).json({ error: 'الإعلان غير موجود أو لا يتبعك.' });
+
+      if (!req.file || !req.file.mimetype.startsWith('video/'))
+        return res.status(400).json({ error: 'الملف المرسل ليس فيديو.' });
+
+      if (ad.videos.length >= MAX_VIDEOS)
+        return res.status(400).json({ error: `تجاوزت الحد الأقصى للفيديو (${MAX_VIDEOS})` });
+
+      // تحويل الفيديو لو كان MOV أو WebM
+      if (
+        req.file.mimetype === 'video/quicktime' ||
+        req.file.mimetype === 'video/webm'
+      ) {
+        const mp4Buffer = await convertMovToMp4(req.file.buffer);
+        req.file.buffer = mp4Buffer;
+        req.file.mimetype = 'video/mp4';
+      }
+
+      const links = await uploadMultipleFilesToS3p([req.file], 'public-posts', userId, adId);
+      ad.videos.push(links[0]);
+      await ad.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'تم رفع الفيديو بنجاح.',
+        link: links[0],
+        currentCount: ad.videos.length
+      });
+
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: 'فشل في رفع الفيديو.' });
+    }
+  });
+};
+
+
+exports.updateAdTextAndDeleteMedia = (req, res) => {
+  uploadp.none()(req, res, async (err) => {
+
     if (err) {
       return res.status(400).json({ error: err.message });
     }
@@ -141,48 +421,40 @@ exports.updateAdMedia = (req, res) => {
       const adId = req.params.adId;
       const userId = req.user?.id;
 
-      // 1) العثور على الإعلان في DB
       const ad = await Ad.findById(adId);
       if (!ad) {
         return res.status(404).json({ error: 'الإعلان غير موجود.' });
       }
 
-      // =========== [A] جلب بيانات الحقول من jsonData إن وُجد ===========
-      let parsedData = req.body; // fallback
+      // 1) قراءة البيانات النصية
+      let parsedData = req.body;
       if (req.body.jsonData) {
-        // إذا وجدنا حقلاً اسمه jsonData سنعتمده
         try {
           parsedData = JSON.parse(req.body.jsonData);
         } catch (parseErr) {
           console.error('خطأ أثناء JSON.parse:', parseErr);
-          // يمكنك إعادة خطأ أو تجاهل الخطأ أو التعامل معه كما يناسبك
         }
       }
 
-      // 2) تحديث الحقول النصية/الرقمية عبر الدالة adServices.js
+      // 2) تحديث الحقول النصية
       updateAdFields(ad, parsedData);
 
-      // ======== [منطق تغيير الحالة] =========
-      // إذا كانت حالة الإعلان حاليًا "مسودة"، نقوم بتحويلها إلى "منشور".
-      // إذا كانت الحالة "غير مكتمل" أو "منشور"، نبقيها كما هي.
+      // 3) منطق تغيير الحالة
       if (ad.status === 'مسودة') {
         ad.status = 'منشور';
       }
 
-      // 2.5) حذف الصور/الفيديوهات القديمة
+      // 4) حذف الصور القديمة
       let { deletedImages, deletedVideos } = req.body;
-      // حذف الصور القديمة
+
       if (deletedImages) {
         if (typeof deletedImages === 'string') {
           try {
             deletedImages = JSON.parse(deletedImages);
-          } catch (e) {
-            // لو فشل parse، نعاملها كقيمة واحدة
-          }
+          } catch (e) {}
         }
-        const imagesToDelete = Array.isArray(deletedImages)
-          ? deletedImages
-          : [deletedImages];
+
+        const imagesToDelete = Array.isArray(deletedImages) ? deletedImages : [deletedImages];
 
         for (const imgUrl of imagesToDelete) {
           ad.images = ad.images.filter(link => link !== imgUrl);
@@ -190,23 +462,20 @@ exports.updateAdMedia = (req, res) => {
           const splitted = imgUrl.split('.com/');
           if (splitted.length < 2) continue;
 
-          let fileKey = splitted[1].split('?')[0];
+          const fileKey = splitted[1].split('?')[0];
           await deleteFileFromS3p(fileKey);
         }
       }
 
-      // حذف الفيديوهات القديمة
+      // 5) حذف الفيديوهات القديمة
       if (deletedVideos) {
         if (typeof deletedVideos === 'string') {
           try {
             deletedVideos = JSON.parse(deletedVideos);
-          } catch (e) {
-            // قيمة مفردة
-          }
+          } catch (e) {}
         }
-        const videosToDelete = Array.isArray(deletedVideos)
-          ? deletedVideos
-          : [deletedVideos];
+
+        const videosToDelete = Array.isArray(deletedVideos) ? deletedVideos : [deletedVideos];
 
         for (const vidUrl of videosToDelete) {
           ad.videos = ad.videos.filter(link => link !== vidUrl);
@@ -214,79 +483,41 @@ exports.updateAdMedia = (req, res) => {
           const splitted = vidUrl.split('.com/');
           if (splitted.length < 2) continue;
 
-          let fileKey = splitted[1].split('?')[0];
+          const fileKey = splitted[1].split('?')[0];
           await deleteFileFromS3p(fileKey);
         }
       }
 
-      // 3) حفظ الإعلان بعد تحديث الحقول وحذف القديم
+      // 6) حفظ الإعلان
       await ad.save();
 
-      // 4) تحقق من الحد الأقصى قبل إضافة ملفات جديدة
-      const images = req.files.images || [];
-      const videos = req.files.videos || [];
-
-      const currentImagesCount = ad.images.length;
-      const currentVideosCount = ad.videos.length;
-
-      // هل نتجاوز الحد الأقصى للصور؟
-      if (currentImagesCount + images.length > MAX_IMAGES) {
-        return res.status(400).json({
-          error: `تجاوزت الحد الأقصى للصور. لديك حاليًا ${currentImagesCount} صورة، وحاولت إضافة ${images.length} ليصبح المجموع ${
-            currentImagesCount + images.length
-          }، والحد الأقصى هو ${MAX_IMAGES}.`
-        });
-      }
-
-      // هل نتجاوز الحد الأقصى للفيديوهات؟
-      if (currentVideosCount + videos.length > MAX_VIDEOS) {
-        return res.status(400).json({
-          error: `تجاوزت الحد الأقصى للفيديوهات. لديك حاليًا ${currentVideosCount} فيديو، وحاولت إضافة ${videos.length} ليصبح المجموع ${
-            currentVideosCount + videos.length
-          }، والحد الأقصى هو ${MAX_VIDEOS}.`
-        });
-      }
-
-      // 5) تحويل أي فيديو MOV أو WebM إلى MP4 قبل الرفع
-      for (const file of videos) {
-        if (
-          file.mimetype === 'video/quicktime' ||
-          file.mimetype === 'video/webm'
-        ) {
-          const mp4Buffer = await convertMovToMp4(file.buffer);
-          file.buffer = mp4Buffer;
-          file.mimetype = 'video/mp4';
-        }
-      }
-
-      // 6) رفع الملفات (صور + فيديوهات) إلى S3
-      const imageLinks = await uploadMultipleFilesToS3p(images, 'public-posts', userId, adId);
-      const videoLinks = await uploadMultipleFilesToS3p(videos, 'public-posts', userId, adId);
-
-      // 7) إضافة الروابط
-      ad.images.push(...imageLinks);
-      ad.videos.push(...videoLinks);
-
-      // 8) حفظ التعديلات النهائية
-      await ad.save();
-console.log(ad)
       return res.status(200).json({
-        message: 'تم تحديث ملفات الإعلان بنجاح (مع تحويل MOV/WebM إلى MP4).',
-        ad: ad,   // عرض كامل معلومات الإعلان
-        images: ad.images,
-        videos: ad.videos
-      }
-    );
+        message: 'تم تحديث بيانات الإعلان بنجاح (مع حذف الصور/الفيديوهات المطلوبة).',
+        ad: ad
+      });
 
     } catch (error) {
-      console.error('Error updating ad media:', error);
+      console.error('Error updating ad text and deleting media:', error);
       return res.status(500).json({
-        error: 'حدث خطأ أثناء تحديث ملفات الإعلان.',
+        error: 'حدث خطأ أثناء تحديث الإعلان.',
         details: error.message
       });
     }
   });
 };
+
+
+
+// {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{نهاية تطوير ركوستات تعد الاعلان }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+
+
+
+
+
+
+
+
+
 
 // GET اعطا بيانات الاعلان 
 

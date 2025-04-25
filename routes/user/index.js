@@ -8,6 +8,30 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+
+// {{{{{{{{{{{{{{{{{{{{{منطقة تطور ركوستات الاعلان }}}}}}}}}}}}}}}}}}}}
+
+// router.post('/ads/upload-file', authenticateToken, userController.uploadSingleFile);
+
+
+// فصل رفع الصور والفيديو
+router.post('/ads/upload-image', authenticateToken, userController.uploadImage);
+router.post('/ads/upload-video', authenticateToken, userController.uploadVideo);
+router.post('/ads/update-text/:adId', authenticateToken, userController.updateAdTextAndDeleteMedia);
+
+
+// router.post('/ads/save-ad-data', authenticateToken, userController.saveAdTextData);
+// router.delete('/ads/delete-file', authenticateToken, userController.deleteFile);
+
+
+
+
+
+// // {{{{{{{{{{{{{{{{{{{{{منطقة تطور ركوستات الاعلان }}}}}}}}}}}}}}}}}}}}
+
+
+
+
 // // مسار لرفع الملفات إلى S3
 // router.post('/upload', upload.single('file'),authenticateToken, userController.uploadPostFile);
 
@@ -172,7 +196,7 @@ router.get('/ads/search', authenticateToken, userController.searchAds);
 // مثلاً:
 router.post('/ads/draft', authenticateToken, userController.createDraftAd);
 
-router.put('/ads/1/:adId', authenticateToken, userController.updateAdMedia);
+// router.put('/ads/1/:adId', authenticateToken, userController.updateAdMedia);
 router.get('/ads/:adId', authenticateToken, userController.getAdByIdd);
 
 
@@ -208,6 +232,9 @@ router.post('/logo', authenticateToken, userController.uploadOrUpdateLogo);
 
 // مسار لحذف الشعار
 router.delete('/logo', authenticateToken, userController.deleteLogo);
+
+
+
 
 
 

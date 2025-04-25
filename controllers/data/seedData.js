@@ -13,7 +13,7 @@ module.exports = {
       /* يمكنك لاحقًا إضافة firstName / lastName / email … إلخ */
       // logoUrl: 'https://files.catbox.moe/jpmw71.png',
 
-      logoUrl: 'https://files.catbox.moe/iepy5f.png',
+      logoUrl: 'https://blokah.s3.me-south-1.amazonaws.com/fake/%D8%B5%D9%88%D8%B1+%D8%B4%D8%B9%D8%A7%D8%B12.png',
 // 
       
       /*──────── الصفحة الرئيسية (homepage) ────────*/
@@ -25,10 +25,16 @@ module.exports = {
         shortDescriptionTitle: 'لمحة عن مكتبنا العقاري المتكامل',
         foundedDate: '1998',
         images: [
-          'https://files.catbox.moe/i2wgji.avif',
-          'https://files.catbox.moe/pzj9ch.jpg',
-          'https://arjanarch.sa/wp-content/uploads/2024/11/Screenshot-2024-11-12-102636.png',
-          'https://ackdconsult.com/uploads/PMCDesigns/source/31636.jpeg'
+          // 'https://arjanarch.sa/wp-content/uploads/2024/11/Screenshot-2024-11-12-102636.png',
+          // 'https://files.catbox.moe/i2wgji.avif',
+          // 'https://files.catbox.moe/pzj9ch.jpg',
+          // 'https://ackdconsult.com/uploads/PMCDesigns/source/31636.jpeg'
+
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/Screenshot-2024-11-12-102636.png',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/w%3D540%2Cq%3D75.avif',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/%D9%86%D8%B3%D8%AE%D8%A9+%D9%85%D9%86+aloula-alfozan-news.jpg',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/31636.jpeg',
+
         ]
       },
 
@@ -73,7 +79,7 @@ module.exports = {
           {
             jobTitle: 'الرئيس التنفيذي',
             name: 'عبدالعزيز',
-            personalPhotoUrl: 'https://files.catbox.moe/4cm54w.webp'
+            personalPhotoUrl: 'https://blokah.s3.me-south-1.amazonaws.com/fake/%D8%B5%D9%88%D8%B1%D8%A9+%D9%85%D9%88%D8%B8%D9%81+%D9%85%D8%AC%D8%AA%D9%87%D8%AF+.webp'
           },
           {
             jobTitle: 'مصمم جرافيك ',
@@ -83,12 +89,13 @@ module.exports = {
           {
             jobTitle: ' العلاقات العامه',
             name: 'ياسر ',
-            personalPhotoUrl: 'https://files.catbox.moe/e51x18.jpg'
+            personalPhotoUrl: 'https://blokah.s3.me-south-1.amazonaws.com/fake/images.jpeg'
+
           },
           {
             jobTitle: 'كاتب محتوى',
             name: 'خالد ',
-            personalPhotoUrl: 'https://files.catbox.moe/ur664l.jpeg'
+            personalPhotoUrl: 'https://blokah.s3.me-south-1.amazonaws.com/fake/a-saudi-arabian-gulf-employee-preview-100613.jpg'
           }
         ],
 
@@ -96,24 +103,24 @@ module.exports = {
           {
             certificateName: 'رخصة فال',
             certificateUrl:
-            'https://files.catbox.moe/lh0wuq.png'
+            'https://blokah.s3.me-south-1.amazonaws.com/fake/Fqjki9GWcAIyQFV.jpeg'
           },
 
         ],
 
         aboutImages: [
-          'https://files.catbox.moe/rum8r4.jpg',
-          'https://files.catbox.moe/688anf.jpg',
-          'https://files.catbox.moe/68spnd.jpg'
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/arabsstock_150872_large.jpg',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/arabsstock_150908_large.jpg',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/arabsstock_52953_large.jpg'
         ],
 
         companyLogos: [
-          'https://files.catbox.moe/krsh2c.jpg',
-          'https://files.catbox.moe/ols6j9.jpg',
-          'https://files.catbox.moe/hnsv71.webp',
-          'https://files.catbox.moe/5hdtkd.png',
-          'https://files.catbox.moe/i0yw7i.png',
-          'https://files.catbox.moe/2bfc5w.png',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/65807.jpg',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/4-Bank-AlJazira.jpg',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/c4b98ed7-bfec-4d3e-9cfb-d084d6c7a752.webp',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/images+(1).png',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/images.png',
+          'https://blokah.s3.me-south-1.amazonaws.com/fake/partners_image_migrate_84_1.png',
 
         ]
       },
@@ -123,14 +130,14 @@ module.exports = {
         {
           branchName: 'الفرع الرئيسي – الرياض',
           locationUrl: 'https://goo.gl/maps/x123MainRiyadh',
-          phoneNumber: '0111234567',
-          whatsappNumber: '0512345678'
+          phoneNumber: '920053455',
+          whatsappNumber: '0507206381'
         },
         {
           branchName: 'فرع جدة – حي الشاطئ',
           locationUrl: 'https://goo.gl/maps/x789Jeddah',
-          phoneNumber: '0129876543',
-          whatsappNumber: '0569876543'
+          phoneNumber: '0507206381',
+          whatsappNumber: '0507206381'
         }
       ]
 
@@ -144,7 +151,7 @@ ads: [
     status: 'منشور',
     title: 'فيلا حديثة بواجهة حجرية – حطين',
     adNumber: 'AD-2001',
-    adType: 'sell',
+    adType: 'بيع',
     city: 'الرياض',
 
     address: 'حي حطين، شارع الأمير محمد بن سلمان',
@@ -193,8 +200,10 @@ ads: [
 
     image: null,
     images: [
-      'https://via.placeholder.com/600x400?text=Villa1',
-      'https://via.placeholder.com/600x400?text=Villa2'
+      'https://blokah.s3.me-south-1.amazonaws.com/fake/Screenshot-2024-11-12-102636.png',
+      'https://blokah.s3.me-south-1.amazonaws.com/fake/w%3D540%2Cq%3D75.avif',
+      'https://blokah.s3.me-south-1.amazonaws.com/fake/%D9%86%D8%B3%D8%AE%D8%A9+%D9%85%D9%86+aloula-alfozan-news.jpg',
+      'https://blokah.s3.me-south-1.amazonaws.com/fake/31636.jpeg',
     ],
     videos: [],
 
