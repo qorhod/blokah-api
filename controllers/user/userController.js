@@ -559,27 +559,59 @@ exports.getAdByIdd = async (req, res) => {
 
 
 // حذف إعلان
+// exports.deleteAdd = async (req, res) => {
+//   const { adId } = req.params;
+
+//   try {
+//     const ad = await Ad.findById(adId);
+
+//     if (!ad) {
+//       return res.status(404).json({ error: 'الإعلان غير موجود.' });
+//     }
+
+//     // التأكد من أن المستخدم هو صاحب الإعلان
+//     if (ad.user.toString() !== req.user.id) {
+//       return res.status(403).json({ error: 'لا تملك الصلاحية لحذف هذا الإعلان.' });
+//     }
+
+//     // حذف الإعلان
+//     await Ad.deleteOne({ _id: adId });
+
+//     // حذف الإعلان من قائمة إعلانات المستخدم
+//     const user = await User.findById(req.user.id);
+//     user.ads = user.ads.filter(ad => ad.toString() !== adId);
+//     await user.save();
+
+//     res.json({ message: 'تم حذف الإعلان بنجاح' });
+//   } catch (error) {
+//     console.error('Error deleting ad:', error);
+//     res.status(500).json({ error: 'حدث خطأ أثناء حذف الإعلان.' });
+//   }
+// };
+
 exports.deleteAdd = async (req, res) => {
   const { adId } = req.params;
 
   try {
+    /*── 1. جلب الإعلان ──*/
     const ad = await Ad.findById(adId);
+    if (!ad) return res.status(404).json({ error: 'الإعلان غير موجود.' });
 
-    if (!ad) {
-      return res.status(404).json({ error: 'الإعلان غير موجود.' });
-    }
-
-    // التأكد من أن المستخدم هو صاحب الإعلان
-    if (ad.user.toString() !== req.user.id) {
+    /*── 2. التأكد من ملكية الإعلان ──*/
+    if (ad.user.toString() !== req.user.id)
       return res.status(403).json({ error: 'لا تملك الصلاحية لحذف هذا الإعلان.' });
-    }
 
-    // حذف الإعلان
+    /*── 3. حذف الإعلان نفسه ──*/
     await Ad.deleteOne({ _id: adId });
 
-    // حذف الإعلان من قائمة إعلانات المستخدم
+    /*── 4. حذف مرجع الإعلان من حساب المستخدم ──*/
     const user = await User.findById(req.user.id);
-    user.ads = user.ads.filter(ad => ad.toString() !== adId);
+    if (!user) return res.status(404).json({ error: 'المستخدم غير موجود.' });
+
+    // تأكد أن ads مصفوفة قبل التصفية
+    if (!Array.isArray(user.ads)) user.ads = [];
+
+    user.ads = user.ads.filter(a => a.toString() !== adId);
     await user.save();
 
     res.json({ message: 'تم حذف الإعلان بنجاح' });
@@ -588,7 +620,6 @@ exports.deleteAdd = async (req, res) => {
     res.status(500).json({ error: 'حدث خطأ أثناء حذف الإعلان.' });
   }
 };
-
 
 
 
@@ -2633,99 +2664,199 @@ exports.getScriptInfoByWebsiteUrl = async (req, res) => {
  * GET /api/website/:websiteUrl
  * يعيد بيانات ملف المستخدم + الإعلانات مع فلاتر وفرز
  */
+// exports.getUserByWebsiteUrl = async (req, res) => {
+//   const { websiteUrl } = req.params;          // example.sa
+//   const {
+//     limit               = 3,
+//     page                = 1,
+//     subCategoryLabel,
+//     propertyType,
+//     city,
+//     district,
+//     isFeatured,
+//     sort,                                     // newest | oldest
+//   } = req.query;
+
+//   try {
+//     /*────────── 1) إيجاد الباقة للحصول على userId ──────────*/
+//     const pkg = await SubscriptionPackage.findOne(
+//       { 'domainInfo.websiteUrl': websiteUrl },
+//       'user'                                  // projection
+//     );
+//     if (!pkg)
+//       return res.status(404).json({
+//         error: 'لا يوجد اشتراك مرتبط بهذا الرابط.',
+//       });
+
+//     const user = await User.findById(
+//       pkg.user,
+//       'firstName lastName email phone accountType companyName domainName entityType logoUrl homepage'
+//     ).lean();
+
+//     if (!user)
+//       return res.status(404).json({
+//         error: 'المستخدم المرتبط بهذا الرابط غير موجود.',
+//       });
+
+//     /*────────── 2) تكوين فلتر الإعلانات ──────────*/
+//     const filter = {
+//       user: user._id,
+//       status: 'منشور',
+//     };
+
+//     if (subCategoryLabel) filter['subCategory.label'] = subCategoryLabel;
+//     if (propertyType)     filter.propertyType         = propertyType;
+//     if (city)             filter.city                 = city;
+//     if (district)         filter.district             = district;
+
+//     if (isFeatured !== undefined) {
+//       filter.isFeatured = isFeatured === 'true';
+//     }
+
+//     /*────────── 3) إعداد الفرز ──────────*/
+//     const sortOptions =
+//       sort === 'newest' ? { createdAt: -1 } :
+//       sort === 'oldest' ? { createdAt:  1 } : {};
+
+//     /*────────── 4) إحصاء وجلب الإعلانات ──────────*/
+//     const totalCount = await Ad.countDocuments(filter);
+
+//     const ads = await Ad.find(filter)
+//       .sort(sortOptions)
+//       .select(
+//         'title adType city bedrooms bathrooms landSize discountPrice ' +
+//         'district subCategory propertyType features price originalPrice ' +
+//         'image images isFeatured statusText createdAt'
+//       )
+//       .limit(parseInt(limit))
+//       .skip((parseInt(page) - 1) * parseInt(limit))
+//       .lean();
+
+//     /*────────── 5) بناء الاستجابة ──────────*/
+//     return res.json({
+//       profile: {
+//         fullName:    `${user.firstName} ${user.lastName}`,
+//         logoUrl:     user.logoUrl,
+//         email:       user.email,
+//         phone:       user.phone,
+//         accountType: user.accountType,
+//         companyName: user.companyName,
+//         domainName:  user.domainName,
+//         entityType:  user.entityType,
+//         homepage:    user.homepage,
+//         websiteUrl,              // من البارام نفسه
+//         ads,
+//         totalCount,
+//       },
+//     });
+//   } catch (error) {
+//     console.error('Error fetching user by websiteUrl:', error);
+//     return res.status(500).json({
+//       error: 'حدث خطأ أثناء جلب بيانات المستخدم.',
+//     });
+//   }
+// };
+
+// controllers/userController.js  (أو أينما تُعرِّف دوالك)
+
 exports.getUserByWebsiteUrl = async (req, res) => {
-  const { websiteUrl } = req.params;          // example.sa
+  const { websiteUrl } = req.params; // example.sa
   const {
-    limit               = 3,
-    page                = 1,
+    limit = 3,
+    page = 1,
     subCategoryLabel,
     propertyType,
     city,
     district,
     isFeatured,
-    sort,                                     // newest | oldest
+    sort, // newest | oldest
   } = req.query;
 
   try {
     /*────────── 1) إيجاد الباقة للحصول على userId ──────────*/
     const pkg = await SubscriptionPackage.findOne(
-      { 'domainInfo.websiteUrl': websiteUrl },
-      'user'                                  // projection
+      { "domainInfo.websiteUrl": websiteUrl },
+      "user" // projection
     );
     if (!pkg)
       return res.status(404).json({
-        error: 'لا يوجد اشتراك مرتبط بهذا الرابط.',
+        error: "لا يوجد اشتراك مرتبط بهذا الرابط.",
       });
 
     const user = await User.findById(
       pkg.user,
-      'firstName lastName email phone accountType companyName domainName entityType logoUrl homepage'
+      "firstName lastName email phone accountType companyName domainName entityType logoUrl homepage"
     ).lean();
 
     if (!user)
       return res.status(404).json({
-        error: 'المستخدم المرتبط بهذا الرابط غير موجود.',
+        error: "المستخدم المرتبط بهذا الرابط غير موجود.",
       });
 
     /*────────── 2) تكوين فلتر الإعلانات ──────────*/
     const filter = {
       user: user._id,
-      status: 'منشور',
+      status: "منشور",
     };
 
-    if (subCategoryLabel) filter['subCategory.label'] = subCategoryLabel;
-    if (propertyType)     filter.propertyType         = propertyType;
-    if (city)             filter.city                 = city;
-    if (district)         filter.district             = district;
+    if (subCategoryLabel) filter["subCategory.label"] = subCategoryLabel;
+    if (propertyType) filter.propertyType = propertyType;
+    if (city) filter.city = city;
+    if (district) filter.district = district;
 
-    if (isFeatured !== undefined) {
-      filter.isFeatured = isFeatured === 'true';
-    }
+    // لا نطبِّق الفلتر إلا إذا كانت القيمة صريحة true أو false
+    if (isFeatured === "true") filter.isFeatured = true;
+    if (isFeatured === "false") filter.isFeatured = false;
 
     /*────────── 3) إعداد الفرز ──────────*/
+    // المميَّز أولًا دائمًا، ثم التاريخ (حديث أو قديم)
+    const baseSort = { isFeatured: -1 };
     const sortOptions =
-      sort === 'newest' ? { createdAt: -1 } :
-      sort === 'oldest' ? { createdAt:  1 } : {};
+      sort === "oldest"
+        ? { ...baseSort, createdAt: 1 }
+        : { ...baseSort, createdAt: -1 }; // default = newest
 
     /*────────── 4) إحصاء وجلب الإعلانات ──────────*/
+    const intLimit = parseInt(limit);
+    const intPage = parseInt(page);
+
     const totalCount = await Ad.countDocuments(filter);
 
     const ads = await Ad.find(filter)
       .sort(sortOptions)
       .select(
-        'title adType city bedrooms bathrooms landSize discountPrice ' +
-        'district subCategory propertyType features price originalPrice ' +
-        'image images isFeatured statusText createdAt'
+        "title adType city bedrooms bathrooms landSize discountPrice " +
+          "district subCategory propertyType features price originalPrice " +
+          "image images isFeatured statusText createdAt"
       )
-      .limit(parseInt(limit))
-      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(intLimit)
+      .skip((intPage - 1) * intLimit)
       .lean();
 
     /*────────── 5) بناء الاستجابة ──────────*/
     return res.json({
       profile: {
-        fullName:    `${user.firstName} ${user.lastName}`,
-        logoUrl:     user.logoUrl,
-        email:       user.email,
-        phone:       user.phone,
+        fullName: `${user.firstName} ${user.lastName}`,
+        logoUrl: user.logoUrl,
+        email: user.email,
+        phone: user.phone,
         accountType: user.accountType,
         companyName: user.companyName,
-        domainName:  user.domainName,
-        entityType:  user.entityType,
-        homepage:    user.homepage,
-        websiteUrl,              // من البارام نفسه
+        domainName: user.domainName,
+        entityType: user.entityType,
+        homepage: user.homepage,
+        websiteUrl, // من البارام نفسه
         ads,
         totalCount,
       },
     });
   } catch (error) {
-    console.error('Error fetching user by websiteUrl:', error);
+    console.error("Error fetching user by websiteUrl:", error);
     return res.status(500).json({
-      error: 'حدث خطأ أثناء جلب بيانات المستخدم.',
+      error: "حدث خطأ أثناء جلب بيانات المستخدم.",
     });
   }
 };
-
 
 
 /**************************************** قسم رئيسي ***********************************

@@ -577,61 +577,130 @@ exports.getAllUserDataByDomain = async (req, res) => {
  * GET /api/website/:websiteUrl/data
  * يجلب بيانات المستخدم + الإعلانات، استناداً إلى websiteUrl المحفوظ في SubscriptionPackage
  */
-exports.getAllUserDataByDomainForWebsiteUrl = async (req, res) => {
-  try {
-    /*──────────────────── 1) التحقق من الـparam ───────────────────*/
-    const { websiteUrl } = req.params;
-    if (!websiteUrl)
-      return res.status(400).json({ error: 'websiteUrl is required' });
+// exports.getAllUserDataByDomainForWebsiteUrl = async (req, res) => {
 
-    /*──────────────────── 2) إيجاد الباقة ثم المستخدم ────────────*/
-    const pkg = await SubscriptionPackage.findOne({
-      'domainInfo.websiteUrl': websiteUrl,
-    });
-    if (!pkg)
-      return res.status(404).json({ error: 'No subscription matches this websiteUrl' });
-
-    const user = await User.findById(pkg.user).select('-password');
-    if (!user)
-      return res.status(404).json({ error: 'User not found for this websiteUrl' });
-
-    /*──────────────────── 3) قراءة نوع فلتر الإعلانات ────────────*/
-    const filterType = user.homepage?.adFilterType; // featured | discounted | new | undefined
-
-    /*──────────────────── 4) تجهيز استعلام الإعلانات ─────────────*/
-    let query = Ad.find({ user: user._id });
-
-    switch (filterType) {
-      case 'featured':
-        query = query.where({ isFeatured: true });
-        break;
-      case 'discounted':
-        query = query.where({ discountPrice: { $ne: '' } });
-        break;
-      case 'new':
-        query = query.sort({ createdAt: -1 }).limit(20); // آخر 20 إعلان
-        break;
-      default:
-        // بدون فلترة إضافية
-        break;
+  exports.getAllUserDataByDomainForWebsiteUrl = async (req, res) => {
+    try {
+      /*──────────────────── 1) التحقق من الـparam ───────────────────*/
+      const { websiteUrl } = req.params;
+      if (!websiteUrl)
+        return res.status(400).json({ error: 'websiteUrl is required' });
+  
+      /*──────────────────── 2) إيجاد الباقة ثم المستخدم ────────────*/
+      const pkg = await SubscriptionPackage.findOne({
+        'domainInfo.websiteUrl': websiteUrl,
+      });
+      if (!pkg)
+        return res
+          .status(404)
+          .json({ error: 'No subscription matches this websiteUrl' });
+  
+      const user = await User.findById(pkg.user).select('-password');
+      if (!user)
+        return res
+          .status(404)
+          .json({ error: 'User not found for this websiteUrl' });
+  
+      /*──────────────────── 3) قراءة نوع فلتر الإعلانات ────────────*/
+      const filterType = user.homepage?.adFilterType; // featured | discounted | new | undefined
+  
+      /*──────────────────── 4) تجهيز استعلام الإعلانات ─────────────*/
+      // يبدأ بشرط المالك + الحالة "منشور"
+      let query = Ad.find({
+        user: user._id,
+        status: 'منشور', // ← الشرط الجديد
+      });
+  
+      switch (filterType) {
+        case 'featured':
+          query = query.where({ isFeatured: true });
+          break;
+        case 'discounted':
+          query = query.where({ discountPrice: { $ne: '' } });
+          break;
+        case 'new':
+          query = query.sort({ createdAt: -1 }).limit(20);
+          break;
+        default:
+          // بدون فلترة إضافية
+          break;
+      }
+  
+      const ads = await query.exec();
+  
+      /*──────────────────── 5) الرد ────────────────────────────────*/
+      return res.status(200).json({
+        message: 'تم جلب بيانات المستخدم والإعلانات بنجاح',
+        user,
+        ads,
+      });
+    } catch (error) {
+      console.error('getAllUserDataByDomainForWebsiteUrl error:', error);
+      return res.status(500).json({
+        error: 'حدث خطأ أثناء جلب البيانات.',
+        details: error.message,
+      });
     }
+  };
+  
 
-    const ads = await query.exec();
 
-    /*──────────────────── 5) الرد ────────────────────────────────*/
-    return res.status(200).json({
-      message: 'تم جلب بيانات المستخدم والإعلانات بنجاح',
-      user,
-      ads,
-    });
-  } catch (error) {
-    console.error('getAllUserDataByDomainForWebsiteUrl error:', error);
-    return res.status(500).json({
-      error: 'حدث خطأ أثناء جلب البيانات.',
-      details: error.message,
-    });
-  }
-};
+
+
+//   try {
+//     /*──────────────────── 1) التحقق من الـparam ───────────────────*/
+//     const { websiteUrl } = req.params;
+//     if (!websiteUrl)
+//       return res.status(400).json({ error: 'websiteUrl is required' });
+
+//     /*──────────────────── 2) إيجاد الباقة ثم المستخدم ────────────*/
+//     const pkg = await SubscriptionPackage.findOne({
+//       'domainInfo.websiteUrl': websiteUrl,
+//     });
+//     if (!pkg)
+//       return res.status(404).json({ error: 'No subscription matches this websiteUrl' });
+
+//     const user = await User.findById(pkg.user).select('-password');
+//     if (!user)
+//       return res.status(404).json({ error: 'User not found for this websiteUrl' });
+
+//     /*──────────────────── 3) قراءة نوع فلتر الإعلانات ────────────*/
+//     const filterType = user.homepage?.adFilterType; // featured | discounted | new | undefined
+
+//     /*──────────────────── 4) تجهيز استعلام الإعلانات ─────────────*/
+//     let query = Ad.find({ user: user._id });
+
+//     switch (filterType) {
+//       case 'featured':
+//         query = query.where({ isFeatured: true });
+//         break;
+//       case 'discounted':
+//         query = query.where({ discountPrice: { $ne: '' } });
+//         break;
+//       case 'new':
+//         query = query.sort({ createdAt: -1 }).limit(20); // آخر 20 إعلان
+//         break;
+//       default:
+//         // بدون فلترة إضافية
+//         break;
+//     }
+
+//     const ads = await query.exec();
+
+//     /*──────────────────── 5) الرد ────────────────────────────────*/
+//     return res.status(200).json({
+//       message: 'تم جلب بيانات المستخدم والإعلانات بنجاح',
+//       user,
+//       ads,
+//     });
+//   } catch (error) {
+//     console.error('getAllUserDataByDomainForWebsiteUrl error:', error);
+//     return res.status(500).json({
+//       error: 'حدث خطأ أثناء جلب البيانات.',
+//       details: error.message,
+//     });
+//   }
+// };
 
 // التحكم في بيانات صفحة من نحن 
 
