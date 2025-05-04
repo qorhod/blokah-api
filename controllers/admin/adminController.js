@@ -738,14 +738,97 @@ exports.createUserWithPackage = async (req, res) => {
  * يدمج البيانات الافتراضية في مستخدم قائم ثم يزرع الإعلانات ويربطها به
  */
 
+  // exports.runSeed = async (req, res, next) => {
+  //   const { userId } = req.params;
+  //   if (!mongoose.Types.ObjectId.isValid(userId)) {
+  //     return res.status(400).json({ ok: false, message: 'معرّف المستخدم غير صالح' });
+  //   }
+  
+  //   const session = await mongoose.startSession();
+  //   session.startTransaction();
+  //   try {
+  //     /*────────────────── جلب المستخدم ──────────────────*/
+  //     const user = await User.findById(userId).session(session);
+  //     if (!user) {
+  //       return res.status(404).json({ ok: false, message: 'المستخدم غير موجود' });
+  //     }
+  
+  //     /*────────────── دالة دمج بدون lodash ──────────────*/
+  //     const deepMergeIfEmpty = (target, source) => {
+  //       for (const key of Object.keys(source)) {
+  //         const val = source[key];
+  
+  //         // كائن متداخل
+  //         if (val && typeof val === 'object' && !Array.isArray(val)) {
+  //           if (!target[key]) target[key] = {};
+  //           deepMergeIfEmpty(target[key], val);
+  //           continue;
+  //         }
+  
+  //         // مصفوفة
+  //         if (Array.isArray(val)) {
+  //           if (!target[key] || target[key].length === 0) target[key] = val;
+  //           continue;
+  //         }
+  
+  //         // قيمة بدائية
+  //         if (
+  //           target[key] === undefined ||
+  //           target[key] === null ||
+  //           target[key] === ''
+  //         ) {
+  //           target[key] = val;
+  //         }
+  //       }
+  //     };
+  
+  //     /*────────────────── دمج الحقول ───────────────────*/
+  //     const defaultUser = seedData.users[0];
+  //     deepMergeIfEmpty(user, defaultUser);
+  //     await user.save({ session });
+  
+  //     /*────────────────── إنشاء الإعلانات ──────────────*/
+  //     const adsTemplate = seedData.ads;
+  //     const bulkOps = adsTemplate.map((a) => ({
+  //       updateOne: {
+  //         filter: { adNumber: a.adNumber },
+  //         update: { $setOnInsert: { ...a, user: user._id } },
+  //         upsert: true
+  //       }
+  //     }));
+  //     await Ad.bulkWrite(bulkOps, { session });
+  
+  //     /*────────────────── إنهاء المعاملة ───────────────*/
+  //     await session.commitTransaction();
+  //     res.status(200).json({
+  //       ok: true,
+  //       message: 'تم تحديث المستخدم وإضافة الإعلانات بنجاح',
+  //       userId: user._id,
+  //       adsInsertedOrIgnored: bulkOps.length
+  //     });
+  //   } catch (err) {
+  //     await session.abortTransaction();
+  //     next(err);
+  //   } finally {
+  //     session.endSession();
+  //   }
+  // };
+  
+
+
+
+
   exports.runSeed = async (req, res, next) => {
     const { userId } = req.params;
+  
+    // 1) تحقُّق من صحة المعرّف
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ ok: false, message: 'معرّف المستخدم غير صالح' });
     }
   
     const session = await mongoose.startSession();
     session.startTransaction();
+  
     try {
       /*────────────────── جلب المستخدم ──────────────────*/
       const user = await User.findById(userId).session(session);
@@ -772,11 +855,7 @@ exports.createUserWithPackage = async (req, res) => {
           }
   
           // قيمة بدائية
-          if (
-            target[key] === undefined ||
-            target[key] === null ||
-            target[key] === ''
-          ) {
+          if (target[key] === undefined || target[key] === null || target[key] === '') {
             target[key] = val;
           }
         }
@@ -787,24 +866,12 @@ exports.createUserWithPackage = async (req, res) => {
       deepMergeIfEmpty(user, defaultUser);
       await user.save({ session });
   
-      /*────────────────── إنشاء الإعلانات ──────────────*/
-      const adsTemplate = seedData.ads;
-      const bulkOps = adsTemplate.map((a) => ({
-        updateOne: {
-          filter: { adNumber: a.adNumber },
-          update: { $setOnInsert: { ...a, user: user._id } },
-          upsert: true
-        }
-      }));
-      await Ad.bulkWrite(bulkOps, { session });
-  
       /*────────────────── إنهاء المعاملة ───────────────*/
       await session.commitTransaction();
       res.status(200).json({
         ok: true,
-        message: 'تم تحديث المستخدم وإضافة الإعلانات بنجاح',
-        userId: user._id,
-        adsInsertedOrIgnored: bulkOps.length
+        message: 'تم تحديث بيانات المستخدم بنجاح',
+        userId: user._id
       });
     } catch (err) {
       await session.abortTransaction();
